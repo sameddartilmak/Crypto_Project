@@ -4,32 +4,20 @@ import sys
 import os
 import datetime
 
-# Üst klasördeki 'ciphers' paketini görebilmek için yol ekliyoruz
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from ciphers import aes, des, rsa_algo
 
-# Şifreleme modüllerini içe aktar
-from ciphers import caesar, vigenere, affine, rail_fence, substitution, columnar, des, aes
+# Server başlatıldığında RSA anahtarlarını üret
+print("RSA Anahtarları üretiliyor... Lütfen bekleyin.")
+PRIVATE_KEY, PUBLIC_KEY = rsa_algo.generate_keys()
+print("RSA Anahtarları Hazır!")
 
-# Algoritma haritası (String isminden modüle erişmek için)
-ALGO_MAP = {
-    'sezar': caesar,
-    'vigenere': vigenere,
-    'affine': affine,
-    'rail fence': rail_fence,
-    'substitution': substitution,
-    'columnar': columnar,
-    'des': des,
-    'aes': aes
-}
-
-HOST = '127.0.0.1'  # Localhost
-PORT = 65432        # Port numarası
+HOST = '127.0.0.1'
+PORT = 65432
 
 def log_to_file(algo, encrypted, key, decrypted, status):
-    """Her işlemi kendi algoritma ismine göre dosyalar."""
-    filename = f"logs_{algo.replace(' ', '_')}.txt"
+    filename = f"logs_{algo}.txt"
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
     with open(filename, "a", encoding="utf-8") as f:
         f.write(f"[{timestamp}] Durum: {status}\n")
         f.write(f"Şifreli: {encrypted}\n")
@@ -42,63 +30,74 @@ def start_server():
         s.bind((HOST, PORT))
         s.listen()
         print(f"Server {HOST}:{PORT} üzerinde dinleniyor...")
-        print("Web arayüzünden (Client) istek bekleniyor...")
 
         while True:
             conn, addr = s.accept()
             with conn:
-                print(f"\nBağlantı kabul edildi: {addr}")
-                data = conn.recv(4096)
+                data = conn.recv(8192) # RSA key büyük olabilir, buffer'ı artırdık
                 if not data:
                     break
                 
                 try:
-                    # Gelen veriyi JSON olarak çözümle
                     request = json.loads(data.decode('utf-8'))
-                    algo_name = request.get('algorithm')
+                    req_type = request.get('type')
+                    
+                    # İstemci Public Key isterse
+                    if req_type == 'GET_PUBLIC_KEY':
+                        response = {
+                            "status": "success",
+                            "public_key": PUBLIC_KEY.decode('utf-8')
+                        }
+                        conn.sendall(json.dumps(response).encode('utf-8'))
+                        continue
+                    
+                    # Şifre Çözme İsteği Geldiyse
+                    algo = request.get('algorithm')
+                    mode = request.get('mode') # 'lib' veya 'manual'
                     cipher_text = request.get('ciphertext')
                     
-                    print(f"\n--- YENİ İSTEK GELDİ ---")
-                    print(f"Algoritma: {algo_name}")
-                    print(f"Şifreli Metin: {cipher_text}")
-                    
-                    # Kullanıcıdan anahtar iste (Server tarafında manuel giriş)
-                    print(f"Lütfen '{algo_name}' algoritması için çözme anahtarını girin:")
-                    server_key = input(">> ")
-                    
-                    # İlgili modülü bul ve decrypt fonksiyonunu çağır
-                    module = ALGO_MAP.get(algo_name)
-                    
-                    if module:
-                        try:
-                            decrypted_text = module.decrypt(cipher_text, server_key)
-                            
-                            # Basit bir hata kontrolü (String dönüyor mu?)
-                            if "Hata" in decrypted_text:
-                                status = "Başarısız"
-                                response_data = {"status": "error", "message": decrypted_text}
-                            else:
-                                status = "Başarılı"
-                                response_data = {"status": "success", "plaintext": decrypted_text}
-                                
-                            print(f"Sonuç ({status}): {decrypted_text}")
-                            
-                            # Dosyaya kaydet
-                            log_to_file(algo_name, cipher_text, server_key, decrypted_text, status)
-                            
-                        except Exception as e:
-                            print(f"Hata oluştu: {e}")
-                            response_data = {"status": "error", "message": str(e)}
-                            log_to_file(algo_name, cipher_text, server_key, str(e), "Kritik Hata")
-                    else:
-                        response_data = {"status": "error", "message": "Bilinmeyen Algoritma"}
+                    print(f"\n--- YENİ MESAJ ({algo} - {mode}) ---")
+                    print(f"Şifreli: {cipher_text[:50]}...") # Çok uzunsa kes
 
-                    # Client'a cevabı gönder
-                    conn.sendall(json.dumps(response_data).encode('utf-8'))
-                    print("Cevap gönderildi. Yeni istek bekleniyor...")
+                    decrypted_text = ""
+                    server_key = "RSA Private Key (Gizli)"
+
+                    # ALGORİTMA SEÇİMİ
+                    if algo == 'aes':
+                        print("AES Çözme Anahtarını Girin:")
+                        server_key = input(">> ")
+                        if mode == 'manual':
+                            # Manuel decrypt implementasyonu yoksa uyarı ver
+                            decrypted_text = "Manuel Decrypt Serverda Henüz Aktif Değil (Lib Kullanılıyor)"
+                            decrypted_text = aes.decrypt_lib(cipher_text, server_key)
+                        else:
+                            decrypted_text = aes.decrypt_lib(cipher_text, server_key)
+
+                    elif algo == 'des':
+                        print("DES Çözme Anahtarını Girin:")
+                        server_key = input(">> ")
+                        decrypted_text = des.decrypt_lib(cipher_text, server_key)
                     
+                    elif algo == 'rsa':
+                        print("RSA Mesajı alınıyor, otomatik çözülüyor...")
+                        decrypted_text = rsa_algo.decrypt(cipher_text, PRIVATE_KEY)
+
+                    # Sonuç Gönderimi
+                    if "Hata" in decrypted_text:
+                        status = "Hata"
+                        resp = {"status": "error", "message": decrypted_text}
+                    else:
+                        status = "Başarılı"
+                        resp = {"status": "success", "plaintext": decrypted_text}
+                    
+                    print(f"Sonuç: {decrypted_text}")
+                    log_to_file(f"{algo}_{mode}", cipher_text, server_key, decrypted_text, status)
+                    conn.sendall(json.dumps(resp).encode('utf-8'))
+
                 except json.JSONDecodeError:
-                    print("Geçersiz veri formatı.")
+                    print("Veri hatası")
+                except Exception as e:
+                    print(f"Server Hatası: {e}")
 
 if __name__ == "__main__":
     start_server()
