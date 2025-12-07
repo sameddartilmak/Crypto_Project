@@ -4,23 +4,10 @@ import json
 import sys
 import os
 
-# Üst klasördeki modülleri görebilmek için
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from ciphers import caesar, vigenere, affine, rail_fence, substitution, columnar, des, aes
+from ciphers import aes, des, rsa_algo
 
 app = Flask(__name__)
-
-# Algoritma haritası
-ALGO_MAP = {
-    'sezar': caesar,
-    'vigenere': vigenere,
-    'affine': affine,
-    'rail fence': rail_fence,
-    'substitution': substitution,
-    'columnar': columnar,
-    'des': des,
-    'aes': aes
-}
 
 SERVER_HOST = '127.0.0.1'
 SERVER_PORT = 65432
@@ -32,33 +19,60 @@ def index():
 @app.route('/encrypt', methods=['POST'])
 def encrypt_route():
     data = request.json
-    algo_name = data.get('algorithm')
-    plaintext = data.get('text')
-    key = data.get('key')
+    algo = data.get('algorithm') # aes, des, rsa
+    mode = data.get('mode')      # lib, manual
+    text = data.get('text')
+    key = data.get('key')        # AES/DES için key
     
-    module = ALGO_MAP.get(algo_name)
-    
-    if not module:
-        return jsonify({'error': 'Algoritma bulunamadı'})
-    
+    encrypted_text = ""
+
     try:
-        # Şifreleme işlemini yap
-        encrypted_text = module.encrypt(plaintext, key)
-        
-        # Sonuçta hata mesajı var mı kontrol et
-        if "Hata" in encrypted_text:
-             return jsonify({'status': 'error', 'message': encrypted_text})
-             
+        if algo == 'aes':
+            if mode == 'manual':
+                encrypted_text = aes.encrypt_manual(text, key)
+            else:
+                encrypted_text = aes.encrypt_lib(text, key)
+                
+        elif algo == 'des':
+            if mode == 'manual':
+                # des.py içinde encrypt_manual ismini düzelttiysen burası çalışır
+                encrypted_text = des.encrypt_manual(text, key) 
+            else:
+                encrypted_text = des.encrypt_lib(text, key)
+                
+        elif algo == 'rsa':
+            # RSA için Server'dan Public Key istemeliyiz
+            public_key = get_server_public_key()
+            if not public_key:
+                return jsonify({'status': 'error', 'message': 'Server Public Key alınamadı!'})
+            
+            encrypted_text = rsa_algo.encrypt(text, public_key)
+
         return jsonify({'status': 'success', 'ciphertext': encrypted_text})
+
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
+
+def get_server_public_key():
+    """Socket ile servera bağlanıp Public Key ister"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((SERVER_HOST, SERVER_PORT))
+            payload = {"type": "GET_PUBLIC_KEY"}
+            s.sendall(json.dumps(payload).encode('utf-8'))
+            data = s.recv(4096)
+            resp = json.loads(data.decode('utf-8'))
+            return resp.get('public_key')
+    except:
+        return None
 
 @app.route('/send_to_server', methods=['POST'])
 def send_server():
     data = request.json
-    # Server'a gönderilecek paket
     payload = {
+        'type': 'MESSAGE',
         'algorithm': data.get('algorithm'),
+        'mode': data.get('mode'),
         'ciphertext': data.get('ciphertext')
     }
     
@@ -66,14 +80,8 @@ def send_server():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((SERVER_HOST, SERVER_PORT))
             s.sendall(json.dumps(payload).encode('utf-8'))
-            
-            # Server'dan cevap bekle
-            response = s.recv(4096)
-            response_data = json.loads(response.decode('utf-8'))
-            
-            return jsonify(response_data)
-    except ConnectionRefusedError:
-        return jsonify({'status': 'error', 'message': 'Server kapalı veya ulaşılamıyor.'})
+            response = s.recv(8192)
+            return jsonify(json.loads(response.decode('utf-8')))
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 

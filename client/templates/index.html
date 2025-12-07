@@ -10,7 +10,7 @@
         /* Genel Sayfa Yapısı */
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); /* Siber güvenlik mavisi */
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             margin: 0;
             min-height: 100vh;
             display: flex;
@@ -19,7 +19,7 @@
             color: #333;
         }
 
-        /* Ana Kart Tasarımı */
+        /* Ana Kart */
         .container {
             width: 100%;
             max-width: 700px;
@@ -66,7 +66,6 @@
             background-color: #f9f9f9;
         }
 
-        /* Inputa tıklanınca oluşan efekt */
         select:focus, input:focus, textarea:focus {
             border-color: #2a5298;
             background-color: #fff;
@@ -74,9 +73,7 @@
             box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1);
         }
 
-        textarea {
-            resize: vertical; /* Sadece dikey boyutlandırma */
-        }
+        textarea { resize: vertical; }
 
         small {
             display: block;
@@ -84,6 +81,13 @@
             font-size: 0.85rem;
             color: #888;
         }
+
+        /* İki sütunlu yapı (Algoritma ve Mod yan yana) */
+        .row {
+            display: flex;
+            gap: 20px;
+        }
+        .col { flex: 1; }
 
         /* Buton Grubu */
         .btn-group {
@@ -107,7 +111,6 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        /* Birinci Buton (Şifrele) */
         #encryptBtn {
             background: linear-gradient(45deg, #11998e, #38ef7d);
             color: white;
@@ -117,7 +120,6 @@
             box-shadow: 0 6px 12px rgba(56, 239, 125, 0.3);
         }
 
-        /* İkinci Buton (Gönder) */
         #sendBtn {
             background: linear-gradient(45deg, #2a5298, #4a90e2);
             color: white;
@@ -127,9 +129,8 @@
             box-shadow: 0 6px 12px rgba(74, 144, 226, 0.4);
         }
 
-        /* Disabled (Pasif) Durum */
         button:disabled {
-            background: #d6d6d6; /* Düz gri */
+            background: #d6d6d6;
             color: #888;
             cursor: not-allowed;
             box-shadow: none;
@@ -143,7 +144,7 @@
             background: #f8f9fa;
             border: 1px solid #e9ecef;
             border-radius: 12px;
-            display: none; /* JS ile açılacak */
+            display: none;
             animation: fadeIn 0.5s ease;
         }
 
@@ -174,11 +175,10 @@
             text-transform: uppercase;
         }
 
-        /* Kriptoloji için Monospace Font (Kod görünümü) */
         .result-value {
             font-family: 'Roboto Mono', monospace;
             background: #2d3436;
-            color: #00cec9; /* Matrix yeşili/turkuazı */
+            color: #00cec9;
             padding: 10px;
             border-radius: 6px;
             word-break: break-all;
@@ -188,7 +188,6 @@
 
         .status-success { color: #00b894; font-weight: bold; }
         .status-error { color: #d63031; font-weight: bold; }
-
     </style>
 </head>
 <body>
@@ -196,18 +195,22 @@
 <div class="container">
     <h1>🛡️ Kriptoloji Client</h1>
     
-    <div class="form-group">
-        <label for="algorithm">Şifreleme Algoritması</label>
-        <select id="algorithm" onchange="resetForm()">
-            <option value="sezar">Sezar (Caesar)</option>
-            <option value="vigenere">Vigenere</option>
-            <option value="affine">Affine</option>
-            <option value="rail fence">Rail Fence</option>
-            <option value="substitution">Substitution</option>
-            <option value="columnar">Columnar Transposition</option>
-            <option value="des">DES (64-bit)</option>
-            <option value="aes">AES (128-bit)</option>
-        </select>
+    <div class="row">
+        <div class="col form-group">
+            <label for="algorithm">Algoritma</label>
+            <select id="algorithm" onchange="resetForm()">
+                <option value="aes">AES-128</option>
+                <option value="des">DES</option>
+                <option value="rsa">RSA-2048 (Asimetrik)</option>
+            </select>
+        </div>
+        <div class="col form-group">
+            <label for="mode">Çalışma Modu</label>
+            <select id="mode" onchange="resetForm()">
+                <option value="lib">Kütüphane (Library)</option>
+                <option value="manual">Manuel (Eğitim)</option>
+            </select>
+        </div>
     </div>
 
     <div class="form-group">
@@ -217,8 +220,8 @@
 
     <div class="form-group">
         <label for="key">Anahtar (Key)</label>
-        <input type="text" id="key" placeholder="Anahtar girin (Örn: 3)">
-        <small id="key-hint">Sezar için bir sayı girin.</small>
+        <input type="text" id="key" placeholder="16 Karakterlik Anahtar (AES)">
+        <small id="key-hint">Lütfen 16 karakter giriniz (Eksikse tamamlanır).</small>
     </div>
 
     <div class="btn-group">
@@ -253,10 +256,13 @@
 <script>
     let currentCiphertext = "";
 
-    // Formu sıfırla ve ipucunu güncelle
+    // Sayfa yüklendiğinde placeholder'ları ayarla
+    window.onload = function() {
+        updatePlaceholder();
+    };
+
     function resetForm() {
         updatePlaceholder();
-        // Algoritma değişirse buton tekrar pasif olsun ve eski sonuçlar gizlensin
         document.getElementById('sendBtn').disabled = true;
         document.getElementById('result-area').style.display = 'none';
         document.getElementById('cipher-result').innerText = "-";
@@ -268,28 +274,45 @@
         const hint = document.getElementById('key-hint');
         const keyInput = document.getElementById('key');
         
-        if(algo === 'sezar') { hint.innerText = "Bir tam sayı girin (Örn: 3)"; keyInput.type = "number"; }
-        else if(algo === 'vigenere') { hint.innerText = "Bir kelime girin (Örn: KEY)"; keyInput.type = "text"; }
-        else if(algo === 'affine') { hint.innerText = "a,b formatında girin (Örn: 5,8)"; keyInput.type = "text"; }
-        else if(algo === 'rail fence') { hint.innerText = "Ray sayısı (Sayı)"; keyInput.type = "number"; }
-        else if(algo === 'substitution') { hint.innerText = "26 harflik karışık alfabe"; keyInput.type = "text"; }
-        else if(algo === 'des') { hint.innerText = "8 karakterli anahtar"; keyInput.type = "text"; }
-        else if(algo === 'aes') { hint.innerText = "16 karakterli anahtar"; keyInput.type = "text"; }
-        else { hint.innerText = "Anahtar girin"; }
+        if(algo === 'rsa') {
+            hint.innerText = "RSA için anahtar Server'dan otomatik alınır.";
+            keyInput.disabled = true;
+            keyInput.placeholder = "Otomatik (Public Key)";
+            keyInput.value = "";
+            keyInput.removeAttribute("maxlength");
+        } 
+        else {
+            keyInput.disabled = false;
+            if(algo === 'aes') { 
+                hint.innerText = "Lütfen 16 karakter giriniz (Eksikse tamamlanır)."; 
+                keyInput.placeholder = "16 Karakterlik Anahtar";
+                keyInput.setAttribute("maxlength", "16");
+            }
+            else if(algo === 'des') { 
+                hint.innerText = "Lütfen 8 karakter giriniz (Eksikse tamamlanır)."; 
+                keyInput.placeholder = "8 Karakterlik Anahtar";
+                keyInput.setAttribute("maxlength", "8");
+            }
+        }
     }
 
     async function performEncrypt() {
         const algo = document.getElementById('algorithm').value;
+        const mode = document.getElementById('mode').value;
         const text = document.getElementById('text').value;
         const key = document.getElementById('key').value;
         const sendBtn = document.getElementById('sendBtn');
         const cipherRes = document.getElementById('cipher-result');
 
-        // Önce butonu pasif yap (yeni işlem başlıyor)
         sendBtn.disabled = true;
 
-        if(!text || !key) {
-            alert("Lütfen metin ve anahtar giriniz.");
+        // RSA hariç diğerlerinde anahtar boş olamaz kontrolü (Basit)
+        if(algo !== 'rsa' && !key) {
+            alert("Lütfen bir anahtar giriniz.");
+            return;
+        }
+        if(!text) {
+            alert("Lütfen şifrelenecek metni giriniz.");
             return;
         }
 
@@ -297,7 +320,12 @@
             const response = await fetch('/encrypt', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ algorithm: algo, text: text, key: key })
+                body: JSON.stringify({ 
+                    algorithm: algo, 
+                    mode: mode, 
+                    text: text, 
+                    key: key 
+                })
             });
 
             const result = await response.json();
@@ -308,16 +336,13 @@
             if (result.status === 'success') {
                 cipherRes.innerText = result.ciphertext;
                 currentCiphertext = result.ciphertext;
-                
-                // --- ŞİFRELEME BAŞARILIYSA BUTONU AKTİF ET ---
                 sendBtn.disabled = false;
                 
-                // Server sonuçlarını temizle
                 document.getElementById('server-status').innerText = "Bekleniyor...";
                 document.getElementById('server-plaintext').innerText = "-";
             } else {
                 cipherRes.innerHTML = `<span class="status-error">${result.message}</span>`;
-                sendBtn.disabled = true; // Hata varsa buton pasif kalsın
+                sendBtn.disabled = true;
             }
         } catch (error) {
             alert("Bir hata oluştu: " + error);
@@ -326,6 +351,7 @@
 
     async function sendToServer() {
         const algo = document.getElementById('algorithm').value;
+        const mode = document.getElementById('mode').value;
         const statusSpan = document.getElementById('server-status');
         const plainSpan = document.getElementById('server-plaintext');
         const sendBtn = document.getElementById('sendBtn');
@@ -337,7 +363,11 @@
             const response = await fetch('/send_to_server', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ algorithm: algo, ciphertext: currentCiphertext })
+                body: JSON.stringify({ 
+                    algorithm: algo, 
+                    mode: mode,
+                    ciphertext: currentCiphertext 
+                })
             });
 
             const result = await response.json();
