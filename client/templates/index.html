@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kriptoloji Projesi - Client</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { background-color: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-size: 16px; margin-right: 10px; }
+        button:hover { background-color: #218838; }
+        button.secondary { background-color: #007bff; }
+        button.secondary:hover { background-color: #0069d9; }
+        #result-area { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px; display: none; }
+        .status-success { color: green; font-weight: bold; }
+        .status-error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Kriptoloji Client</h1>
+    
+    <div class="form-group">
+        <label for="algorithm">Şifreleme Algoritması Seçin:</label>
+        <select id="algorithm" onchange="updatePlaceholder()">
+            <option value="sezar">Sezar (Caesar)</option>
+            <option value="vigenere">Vigenere</option>
+            <option value="affine">Affine</option>
+            <option value="rail fence">Rail Fence</option>
+            <option value="substitution">Substitution</option>
+            <option value="columnar">Columnar Transposition</option>
+            <option value="des">DES (64-bit)</option>
+            <option value="aes">AES (128-bit)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="text">Şifrelenecek Metin:</label>
+        <textarea id="text" rows="3" placeholder="Metni buraya girin..."></textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="key">Anahtar (Key):</label>
+        <input type="text" id="key" placeholder="Anahtar girin (Örn: 3)">
+        <small id="key-hint" style="color: #666;">Sezar için bir sayı girin.</small>
+    </div>
+
+    <button onclick="performEncrypt()">1. Şifrele</button>
+    <button class="secondary" onclick="sendToServer()" id="sendBtn" disabled>2. Server'a Gönder</button>
+
+    <div id="result-area">
+        <h3>Sonuçlar:</h3>
+        <p><strong>Şifreli Metin (Local):</strong> <span id="cipher-result">-</span></p>
+        <p><strong>Server Durumu:</strong> <span id="server-status">-</span></p>
+        <p><strong>Server Çözümü:</strong> <span id="server-plaintext">-</span></p>
+    </div>
+</div>
+
+<script>
+    let currentCiphertext = "";
+
+    function updatePlaceholder() {
+        const algo = document.getElementById('algorithm').value;
+        const hint = document.getElementById('key-hint');
+        const keyInput = document.getElementById('key');
+        
+        if(algo === 'sezar') { hint.innerText = "Bir tam sayı girin (Örn: 3)"; keyInput.type = "number"; }
+        else if(algo === 'vigenere') { hint.innerText = "Bir kelime girin (Örn: KEY)"; keyInput.type = "text"; }
+        else if(algo === 'affine') { hint.innerText = "a,b formatında girin (Örn: 5,8)"; keyInput.type = "text"; }
+        else if(algo === 'rail fence') { hint.innerText = "Ray sayısı (Sayı)"; keyInput.type = "number"; }
+        else if(algo === 'substitution') { hint.innerText = "26 harflik karışık alfabe"; keyInput.type = "text"; }
+        else if(algo === 'des') { hint.innerText = "8 karakterli anahtar"; keyInput.type = "text"; }
+        else if(algo === 'aes') { hint.innerText = "16 karakterli anahtar"; keyInput.type = "text"; }
+        else { hint.innerText = "Anahtar girin"; }
+    }
+
+    async function performEncrypt() {
+        const algo = document.getElementById('algorithm').value;
+        const text = document.getElementById('text').value;
+        const key = document.getElementById('key').value;
+
+        const response = await fetch('/encrypt', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ algorithm: algo, text: text, key: key })
+        });
+
+        const result = await response.json();
+        const resArea = document.getElementById('result-area');
+        const cipherRes = document.getElementById('cipher-result');
+        const sendBtn = document.getElementById('sendBtn');
+
+        resArea.style.display = 'block';
+        
+        if (result.status === 'success') {
+            cipherRes.innerText = result.ciphertext;
+            currentCiphertext = result.ciphertext;
+            sendBtn.disabled = false;
+        } else {
+            cipherRes.innerHTML = `<span class="status-error">${result.message}</span>`;
+            sendBtn.disabled = true;
+        }
+    }
+
+    async function sendToServer() {
+        const algo = document.getElementById('algorithm').value;
+        const statusSpan = document.getElementById('server-status');
+        const plainSpan = document.getElementById('server-plaintext');
+
+        statusSpan.innerText = "Server bekleniyor...";
+        
+        const response = await fetch('/send_to_server', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ algorithm: algo, ciphertext: currentCiphertext })
+        });
+
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            statusSpan.innerHTML = '<span class="status-success">DEŞİFRELEME BAŞARILI</span>';
+            plainSpan.innerText = result.plaintext;
+        } else {
+            statusSpan.innerHTML = '<span class="status-error">BAŞARISIZ</span>';
+            plainSpan.innerText = result.message || "Hata oluştu";
+        }
+    }
+</script>
+
+</body>
+</html>
