@@ -1,0 +1,20 @@
+[2025-12-07 16:40:54] Durum: Başarılı
+Şifreli: Khoor
+Anahtar: 1
+Çözülmüş: Jgnnq
+------------------------------
+[2025-12-07 16:41:15] Durum: Başarılı
+Şifreli: Khoor
+Anahtar: 3
+Çözülmüş: Hello
+------------------------------
+[2025-12-07 16:44:47] Durum: Başarılı
+Şifreli: nbm
+Anahtar: 1
+Çözülmüş: mal
+------------------------------
+[2025-12-07 16:47:18] Durum: Başarılı
+Şifreli: ocn
+Anahtar: 2
+Çözülmüş: mal
+------------------------------

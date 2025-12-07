@@ -4,30 +4,201 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kriptoloji Projesi - Client</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #333; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        select, input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        button { background-color: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-size: 16px; margin-right: 10px; }
-        button:hover { background-color: #218838; }
-        button.secondary { background-color: #007bff; }
-        button.secondary:hover { background-color: #0069d9; }
-        #result-area { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px; display: none; }
-        .status-success { color: green; font-weight: bold; }
-        .status-error { color: red; font-weight: bold; }
+        /* Genel Sayfa Yapısı */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); /* Siber güvenlik mavisi */
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        /* Ana Kart Tasarımı */
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            margin: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1e3c72;
+            margin-bottom: 30px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+        }
+
+        /* Form Elemanları */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: #f9f9f9;
+        }
+
+        /* Inputa tıklanınca oluşan efekt */
+        select:focus, input:focus, textarea:focus {
+            border-color: #2a5298;
+            background-color: #fff;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1);
+        }
+
+        textarea {
+            resize: vertical; /* Sadece dikey boyutlandırma */
+        }
+
+        small {
+            display: block;
+            margin-top: 5px;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        /* Buton Grubu */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* Birinci Buton (Şifrele) */
+        #encryptBtn {
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+            color: white;
+        }
+        #encryptBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(56, 239, 125, 0.3);
+        }
+
+        /* İkinci Buton (Gönder) */
+        #sendBtn {
+            background: linear-gradient(45deg, #2a5298, #4a90e2);
+            color: white;
+        }
+        #sendBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(74, 144, 226, 0.4);
+        }
+
+        /* Disabled (Pasif) Durum */
+        button:disabled {
+            background: #d6d6d6; /* Düz gri */
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Sonuç Alanı */
+        #result-area {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            display: none; /* JS ile açılacak */
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #result-area h3 {
+            margin-top: 0;
+            color: #1e3c72;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .result-row {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        /* Kriptoloji için Monospace Font (Kod görünümü) */
+        .result-value {
+            font-family: 'Roboto Mono', monospace;
+            background: #2d3436;
+            color: #00cec9; /* Matrix yeşili/turkuazı */
+            padding: 10px;
+            border-radius: 6px;
+            word-break: break-all;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+        }
+
+        .status-success { color: #00b894; font-weight: bold; }
+        .status-error { color: #d63031; font-weight: bold; }
+
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Kriptoloji Client</h1>
+    <h1>🛡️ Kriptoloji Client</h1>
     
     <div class="form-group">
-        <label for="algorithm">Şifreleme Algoritması Seçin:</label>
-        <select id="algorithm" onchange="updatePlaceholder()">
+        <label for="algorithm">Şifreleme Algoritması</label>
+        <select id="algorithm" onchange="resetForm()">
             <option value="sezar">Sezar (Caesar)</option>
             <option value="vigenere">Vigenere</option>
             <option value="affine">Affine</option>
@@ -40,29 +211,57 @@
     </div>
 
     <div class="form-group">
-        <label for="text">Şifrelenecek Metin:</label>
-        <textarea id="text" rows="3" placeholder="Metni buraya girin..."></textarea>
+        <label for="text">Şifrelenecek Metin</label>
+        <textarea id="text" rows="3" placeholder="Gizli mesajınızı buraya yazın..."></textarea>
     </div>
 
     <div class="form-group">
-        <label for="key">Anahtar (Key):</label>
+        <label for="key">Anahtar (Key)</label>
         <input type="text" id="key" placeholder="Anahtar girin (Örn: 3)">
-        <small id="key-hint" style="color: #666;">Sezar için bir sayı girin.</small>
+        <small id="key-hint">Sezar için bir sayı girin.</small>
     </div>
 
-    <button onclick="performEncrypt()">1. Şifrele</button>
-    <button class="secondary" onclick="sendToServer()" id="sendBtn" disabled>2. Server'a Gönder</button>
+    <div class="btn-group">
+        <button onclick="performEncrypt()" id="encryptBtn">
+            🔒 1. Şifrele
+        </button>
+        <button onclick="sendToServer()" id="sendBtn" disabled>
+            🚀 2. Server'a Gönder
+        </button>
+    </div>
 
     <div id="result-area">
-        <h3>Sonuçlar:</h3>
-        <p><strong>Şifreli Metin (Local):</strong> <span id="cipher-result">-</span></p>
-        <p><strong>Server Durumu:</strong> <span id="server-status">-</span></p>
-        <p><strong>Server Çözümü:</strong> <span id="server-plaintext">-</span></p>
+        <h3>Sonuç Konsolu</h3>
+        
+        <div class="result-row">
+            <span class="result-label">Oluşturulan Şifreli Metin (Ciphertext):</span>
+            <div id="cipher-result" class="result-value">-</div>
+        </div>
+
+        <div class="result-row" style="border-top: 1px dashed #ccc; padding-top: 10px;">
+            <span class="result-label">Server Bağlantı Durumu:</span>
+            <span id="server-status">-</span>
+        </div>
+
+        <div class="result-row">
+            <span class="result-label">Server Tarafından Çözülen Metin (Plaintext):</span>
+            <div id="server-plaintext" class="result-value" style="color: #fab1a0;">-</div>
+        </div>
     </div>
 </div>
 
 <script>
     let currentCiphertext = "";
+
+    // Formu sıfırla ve ipucunu güncelle
+    function resetForm() {
+        updatePlaceholder();
+        // Algoritma değişirse buton tekrar pasif olsun ve eski sonuçlar gizlensin
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('result-area').style.display = 'none';
+        document.getElementById('cipher-result').innerText = "-";
+        currentCiphertext = "";
+    }
 
     function updatePlaceholder() {
         const algo = document.getElementById('algorithm').value;
@@ -83,27 +282,45 @@
         const algo = document.getElementById('algorithm').value;
         const text = document.getElementById('text').value;
         const key = document.getElementById('key').value;
-
-        const response = await fetch('/encrypt', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ algorithm: algo, text: text, key: key })
-        });
-
-        const result = await response.json();
-        const resArea = document.getElementById('result-area');
-        const cipherRes = document.getElementById('cipher-result');
         const sendBtn = document.getElementById('sendBtn');
+        const cipherRes = document.getElementById('cipher-result');
 
-        resArea.style.display = 'block';
-        
-        if (result.status === 'success') {
-            cipherRes.innerText = result.ciphertext;
-            currentCiphertext = result.ciphertext;
-            sendBtn.disabled = false;
-        } else {
-            cipherRes.innerHTML = `<span class="status-error">${result.message}</span>`;
-            sendBtn.disabled = true;
+        // Önce butonu pasif yap (yeni işlem başlıyor)
+        sendBtn.disabled = true;
+
+        if(!text || !key) {
+            alert("Lütfen metin ve anahtar giriniz.");
+            return;
+        }
+
+        try {
+            const response = await fetch('/encrypt', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ algorithm: algo, text: text, key: key })
+            });
+
+            const result = await response.json();
+            const resArea = document.getElementById('result-area');
+            
+            resArea.style.display = 'block';
+            
+            if (result.status === 'success') {
+                cipherRes.innerText = result.ciphertext;
+                currentCiphertext = result.ciphertext;
+                
+                // --- ŞİFRELEME BAŞARILIYSA BUTONU AKTİF ET ---
+                sendBtn.disabled = false;
+                
+                // Server sonuçlarını temizle
+                document.getElementById('server-status').innerText = "Bekleniyor...";
+                document.getElementById('server-plaintext').innerText = "-";
+            } else {
+                cipherRes.innerHTML = `<span class="status-error">${result.message}</span>`;
+                sendBtn.disabled = true; // Hata varsa buton pasif kalsın
+            }
+        } catch (error) {
+            alert("Bir hata oluştu: " + error);
         }
     }
 
@@ -111,23 +328,31 @@
         const algo = document.getElementById('algorithm').value;
         const statusSpan = document.getElementById('server-status');
         const plainSpan = document.getElementById('server-plaintext');
+        const sendBtn = document.getElementById('sendBtn');
 
         statusSpan.innerText = "Server bekleniyor...";
+        sendBtn.disabled = true;
         
-        const response = await fetch('/send_to_server', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ algorithm: algo, ciphertext: currentCiphertext })
-        });
+        try {
+            const response = await fetch('/send_to_server', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ algorithm: algo, ciphertext: currentCiphertext })
+            });
 
-        const result = await response.json();
-        
-        if (result.status === 'success') {
-            statusSpan.innerHTML = '<span class="status-success">DEŞİFRELEME BAŞARILI</span>';
-            plainSpan.innerText = result.plaintext;
-        } else {
-            statusSpan.innerHTML = '<span class="status-error">BAŞARISIZ</span>';
-            plainSpan.innerText = result.message || "Hata oluştu";
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                statusSpan.innerHTML = '<span class="status-success">✓ DEŞİFRELEME BAŞARILI</span>';
+                plainSpan.innerText = result.plaintext;
+            } else {
+                statusSpan.innerHTML = '<span class="status-error">✖ BAŞARISIZ</span>';
+                plainSpan.innerText = result.message || "Hata oluştu";
+            }
+        } catch (error) {
+            statusSpan.innerText = "Hata: Server ile iletişim kurulamadı.";
+        } finally {
+            sendBtn.disabled = false;
         }
     }
 </script>
