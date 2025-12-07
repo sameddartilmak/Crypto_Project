@@ -1,30 +1,41 @@
 # ciphers/aes.py
+from Crypto.Cipher import AES as LibAES
+from Crypto.Util.Padding import pad as lib_pad, unpad as lib_unpad
+import base64
+
+# Anahtarı AES-128 için geçerli hale getiren yardımcı fonksiyon
+def get_valid_key(key):
+    """
+    AES için anahtarı tam 16 byte (128 bit) yapar.
+    Kısa ise null byte ile tamamlar, uzunsa kırpar.
+    """
+    key_bytes = key.encode('utf-8')
+    # 16 byte'a tamamla veya kırparak eşitle
+    key_bytes = key_bytes.ljust(16, b'\0')[:16]
+    return key_bytes
 
 # ==========================================
-# KÜTÜPHANELİ VERSİYON (YORUM SATIRI)
+# KÜTÜPHANELİ MOD
 # ==========================================
-# from Crypto.Cipher import AES
-# from Crypto.Util.Padding import pad, unpad
-# import base64
-#
-# def encrypt_lib(text, key):
-#     # AES anahtarı 16, 24 veya 32 byte olmalıdır.
-#     key = key.ljust(16)[:16].encode('utf-8')
-#     cipher = AES.new(key, AES.MODE_ECB)
-#     padded_text = pad(text.encode('utf-8'), AES.block_size)
-#     encrypted_bytes = cipher.encrypt(padded_text)
-#     return base64.b64encode(encrypted_bytes).decode('utf-8')
-#
-# def decrypt_lib(encrypted_text, key):
-#     key = key.ljust(16)[:16].encode('utf-8')
-#     cipher = AES.new(key, AES.MODE_ECB)
-#     try:
-#         decoded_encrypted_text = base64.b64decode(encrypted_text)
-#         decrypted_text = unpad(cipher.decrypt(decoded_encrypted_text), AES.block_size)
-#         return decrypted_text.decode('utf-8')
-#     except:
-#         return "Hata: Deşifreleme başarısız."
-# ==========================================
+def encrypt_lib(text, key):
+    try:
+        key_bytes = get_valid_key(key) # 16 Byte Garanti
+        cipher = LibAES.new(key_bytes, LibAES.MODE_ECB)
+        padded_text = lib_pad(text.encode('utf-8'), LibAES.block_size)
+        encrypted_bytes = cipher.encrypt(padded_text)
+        return base64.b64encode(encrypted_bytes).decode('utf-8')
+    except Exception as e:
+        return f"Lib Hatası: {str(e)}"
+
+def decrypt_lib(encrypted_text, key):
+    try:
+        key_bytes = get_valid_key(key) # 16 Byte Garanti
+        cipher = LibAES.new(key_bytes, LibAES.MODE_ECB)
+        decoded_encrypted_text = base64.b64decode(encrypted_text)
+        decrypted_text = lib_unpad(cipher.decrypt(decoded_encrypted_text), LibAES.block_size)
+        return decrypted_text.decode('utf-8')
+    except Exception as e:
+        return f"Lib Deşifre Hatası: {str(e)}"
 
 
 # ==========================================
@@ -174,11 +185,17 @@ def unpad(text):
     pad_len = ord(text[-1])
     return text[:-pad_len]
 
-def encrypt(text, key):
-    # Anahtar 16 byte (128 bit) olmalı
-    key = key.ljust(16)[:16]
-    key_bytes = [ord(c) for c in key]
-    key_schedule = key_expansion(key_bytes)
+def encrypt_manual(text, key):
+    """
+    Manuel AES-128 Şifreleme (Eğitim Amaçlı)
+    Anahtarı 16 byte'a zorlar.
+    """
+    # Anahtarı byte'a çevir, 16 byte'a tamamla/kırp
+    key_bytes = get_valid_key(key)
+    # Manuel algoritma int listesi istediği için dönüştür
+    key_as_ints = [b for b in key_bytes]
+    
+    key_schedule = key_expansion(key_as_ints)
     
     padded_text = pad(text)
     encrypted_bytes = []
@@ -194,15 +211,18 @@ def encrypt(text, key):
     # Hex olarak döndür
     return ''.join(f'{x:02x}' for x in encrypted_bytes).upper()
 
-def decrypt(text, key):
+def decrypt_manual(text, key):
+    """
+    Manuel AES-128 Deşifreleme (Eğitim Amaçlı)
+    """
     try:
         data = bytes.fromhex(text)
     except:
         return "Hata: Geçersiz Hex"
         
-    key = key.ljust(16)[:16]
-    key_bytes = [ord(c) for c in key]
-    key_schedule = key_expansion(key_bytes)
+    key_bytes = get_valid_key(key)
+    key_as_ints = [b for b in key_bytes]
+    key_schedule = key_expansion(key_as_ints)
     
     decrypted_bytes = []
     
