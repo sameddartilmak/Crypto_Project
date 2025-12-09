@@ -82,7 +82,7 @@
             color: #888;
         }
 
-        /* İki sütunlu yapı (Algoritma ve Mod yan yana) */
+        /* İki sütunlu yapı */
         .row {
             display: flex;
             gap: 20px;
@@ -199,9 +199,19 @@
         <div class="col form-group">
             <label for="algorithm">Algoritma</label>
             <select id="algorithm" onchange="resetForm()">
-                <option value="aes">AES-128</option>
-                <option value="des">DES</option>
-                <option value="rsa">RSA-2048 (Asimetrik)</option>
+                <optgroup label="Modern Şifreleme (Ödev)">
+                    <option value="aes" selected>AES-128</option>
+                    <option value="des">DES</option>
+                    <option value="rsa">RSA-2048 (Asimetrik)</option>
+                </optgroup>
+                <optgroup label="Klasik Şifreleme">
+                    <option value="sezar">Sezar (Caesar)</option>
+                    <option value="vigenere">Vigenere</option>
+                    <option value="affine">Affine</option>
+                    <option value="rail_fence">Rail Fence</option>
+                    <option value="substitution">Substitution</option>
+                    <option value="columnar">Columnar Transposition</option>
+                </optgroup>
             </select>
         </div>
         <div class="col form-group">
@@ -273,25 +283,66 @@
         const algo = document.getElementById('algorithm').value;
         const hint = document.getElementById('key-hint');
         const keyInput = document.getElementById('key');
+        const modeSelect = document.getElementById('mode');
         
+        // 1. RSA Kontrolü (Otomatik Anahtar)
         if(algo === 'rsa') {
             hint.innerText = "RSA için anahtar Server'dan otomatik alınır.";
             keyInput.disabled = true;
             keyInput.placeholder = "Otomatik (Public Key)";
             keyInput.value = "";
             keyInput.removeAttribute("maxlength");
+            modeSelect.disabled = true; // RSA'da manuel yok
         } 
         else {
             keyInput.disabled = false;
-            if(algo === 'aes') { 
-                hint.innerText = "Lütfen 16 karakter giriniz (Eksikse tamamlanır)."; 
-                keyInput.placeholder = "16 Karakterlik Anahtar";
-                keyInput.setAttribute("maxlength", "16");
+            
+            // 2. Modern Şifreler (AES/DES - Mod Seçimi Aktif)
+            if(algo === 'aes' || algo === 'des') {
+                modeSelect.disabled = false;
+                if(algo === 'aes') { 
+                    hint.innerText = "Lütfen 16 karakter giriniz (Eksikse tamamlanır)."; 
+                    keyInput.placeholder = "16 Karakterlik Anahtar";
+                    keyInput.setAttribute("maxlength", "16");
+                    keyInput.type = "text";
+                }
+                else { // des
+                    hint.innerText = "Lütfen 8 karakter giriniz (Eksikse tamamlanır)."; 
+                    keyInput.placeholder = "8 Karakterlik Anahtar";
+                    keyInput.setAttribute("maxlength", "8");
+                    keyInput.type = "text";
+                }
             }
-            else if(algo === 'des') { 
-                hint.innerText = "Lütfen 8 karakter giriniz (Eksikse tamamlanır)."; 
-                keyInput.placeholder = "8 Karakterlik Anahtar";
-                keyInput.setAttribute("maxlength", "8");
+            // 3. Klasik Şifreler (Mod Seçimi Pasif - Sadece tek kod var)
+            else {
+                modeSelect.disabled = true;
+                keyInput.removeAttribute("maxlength");
+
+                if(algo === 'sezar') {
+                    hint.innerText = "Kaydırma miktarı (Sayı girin).";
+                    keyInput.placeholder = "Örn: 3";
+                    keyInput.type = "number";
+                }
+                else if(algo === 'vigenere') {
+                    hint.innerText = "Anahtar kelime girin.";
+                    keyInput.placeholder = "Örn: ANAHTAR";
+                    keyInput.type = "text";
+                }
+                else if(algo === 'affine') {
+                    hint.innerText = "a,b formatında girin.";
+                    keyInput.placeholder = "Örn: 5,8";
+                    keyInput.type = "text";
+                }
+                else if(algo === 'rail_fence') {
+                    hint.innerText = "Ray sayısı (Sayı girin).";
+                    keyInput.placeholder = "Örn: 3";
+                    keyInput.type = "number";
+                }
+                else {
+                    hint.innerText = "Anahtar girin.";
+                    keyInput.placeholder = "Anahtar";
+                    keyInput.type = "text";
+                }
             }
         }
     }
@@ -304,9 +355,10 @@
         const sendBtn = document.getElementById('sendBtn');
         const cipherRes = document.getElementById('cipher-result');
 
+        // Butonu geçici pasif yap
         sendBtn.disabled = true;
 
-        // RSA hariç diğerlerinde anahtar boş olamaz kontrolü (Basit)
+        // RSA hariç diğerlerinde anahtar boş olamaz
         if(algo !== 'rsa' && !key) {
             alert("Lütfen bir anahtar giriniz.");
             return;
@@ -336,6 +388,8 @@
             if (result.status === 'success') {
                 cipherRes.innerText = result.ciphertext;
                 currentCiphertext = result.ciphertext;
+                
+                // Şifreleme başarılıysa gönder butonu açılır
                 sendBtn.disabled = false;
                 
                 document.getElementById('server-status').innerText = "Bekleniyor...";

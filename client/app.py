@@ -4,8 +4,11 @@ import json
 import sys
 import os
 
+# Üst klasördeki modülleri görebilmek için yol ekle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from ciphers import aes, des, rsa_algo
+
+# --- TÜM ALGORİTMALARI IMPORT ET ---
+from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar
 
 app = Flask(__name__)
 
@@ -19,15 +22,30 @@ def index():
 @app.route('/encrypt', methods=['POST'])
 def encrypt_route():
     data = request.json
-    algo = data.get('algorithm') # aes, des, rsa
-    mode = data.get('mode')      # lib, manual
+    algo = data.get('algorithm') 
+    mode = data.get('mode')      
     text = data.get('text')
-    key = data.get('key')        # AES/DES için key
+    key = data.get('key')        
     
     encrypted_text = ""
 
     try:
-        if algo == 'aes':
+        # --- KLASİK ŞİFRELEMELER (Bunlarda Mod Ayrımı Yoktur) ---
+        if algo == 'sezar':
+            encrypted_text = caesar.encrypt(text, key)
+        elif algo == 'vigenere':
+            encrypted_text = vigenere.encrypt(text, key)
+        elif algo == 'affine':
+            encrypted_text = affine.encrypt(text, key)
+        elif algo == 'rail_fence':
+            encrypted_text = rail_fence.encrypt(text, key)
+        elif algo == 'substitution':
+            encrypted_text = substitution.encrypt(text, key)
+        elif algo == 'columnar':
+            encrypted_text = columnar.encrypt(text, key)
+
+        # --- MODERN ŞİFRELEMELER (AES / DES / RSA) ---
+        elif algo == 'aes':
             if mode == 'manual':
                 encrypted_text = aes.encrypt_manual(text, key)
             else:
@@ -35,18 +53,15 @@ def encrypt_route():
                 
         elif algo == 'des':
             if mode == 'manual':
-                # des.py içinde encrypt_manual ismini düzelttiysen burası çalışır
                 encrypted_text = des.encrypt_manual(text, key) 
             else:
                 encrypted_text = des.encrypt_lib(text, key)
                 
         elif algo == 'rsa':
-            # RSA için Server'dan Public Key istemeliyiz
             public_key = get_server_public_key()
             if not public_key:
                 return jsonify({'status': 'error', 'message': 'Server Public Key alınamadı!'})
-            
-            encrypted_text = rsa_algo.encrypt(text, public_key)
+            encrypted_text = rsa.encrypt(text, public_key)
 
         return jsonify({'status': 'success', 'ciphertext': encrypted_text})
 
@@ -54,7 +69,6 @@ def encrypt_route():
         return jsonify({'status': 'error', 'message': str(e)})
 
 def get_server_public_key():
-    """Socket ile servera bağlanıp Public Key ister"""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((SERVER_HOST, SERVER_PORT))
