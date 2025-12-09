@@ -1,25 +1,19 @@
-# ciphers/des.py
 from Crypto.Cipher import DES as LibDES
 from Crypto.Util.Padding import pad as lib_pad, unpad as lib_unpad
 import base64
 
-# Anahtarı DES için geçerli hale getiren yardımcı fonksiyon
-def get_valid_key(key):
-    """
-    DES için anahtarı tam 8 byte (64 bit) yapar.
-    Kısa ise tamamlar, uzunsa kırpar.
-    """
+def get_valid_key(key): 
+    """anahtarı 8 bit yapar."""
+
     key_bytes = key.encode('utf-8')
-    # 8 byte'a tamamla (pad with null bytes) veya kırp
     key_bytes = key_bytes.ljust(8, b'\0')[:8]
     return key_bytes
 
-# ==========================================
 # KÜTÜPHANELİ MOD
-# ==========================================
+
 def encrypt_lib(text, key):
     try:
-        key_bytes = get_valid_key(key) # 8 Byte garanti
+        key_bytes = get_valid_key(key)
         cipher = LibDES.new(key_bytes, LibDES.MODE_ECB)
         padded_text = lib_pad(text.encode('utf-8'), LibDES.block_size)
         encrypted_bytes = cipher.encrypt(padded_text)
@@ -29,7 +23,7 @@ def encrypt_lib(text, key):
 
 def decrypt_lib(encrypted_text, key):
     try:
-        key_bytes = get_valid_key(key) # 8 Byte garanti
+        key_bytes = get_valid_key(key)
         cipher = LibDES.new(key_bytes, LibDES.MODE_ECB)
         decoded_encrypted_text = base64.b64decode(encrypted_text)
         decrypted_text = lib_unpad(cipher.decrypt(decoded_encrypted_text), LibDES.block_size)
@@ -37,12 +31,8 @@ def decrypt_lib(encrypted_text, key):
     except Exception as e:
         return f"Lib Hata: {str(e)}"
 
-
-# ==========================================
 # KÜTÜPHANESİZ (MANUEL) VERSİYON
-# ==========================================
 
-# DES Sabit Tabloları (Permütasyon, S-Box vb.)
 PI = [58, 50, 42, 34, 26, 18, 10, 2,
       60, 52, 44, 36, 28, 20, 12, 4,
       62, 54, 46, 38, 30, 22, 14, 6,
@@ -138,7 +128,6 @@ SHIFT = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
 def string_to_bit_array(text):
     array = list()
     for char in text:
-        # Eğer manuel moda bytes gelirse onu int olarak al, string gelirse ord() kullan
         val = char if isinstance(char, int) else ord(char)
         binval = bin(val)[2:].zfill(8)
         array.extend([int(x) for x in list(binval)])
@@ -170,8 +159,6 @@ def substitute(block):
 def generate_keys(key):
     keys = []
     key = string_to_bit_array(key)
-    # Anahtar 64 bit (8 byte) olmalı, değilse hata verebilir ama 
-    # encrypt_manual içinde bunu zorluyoruz.
     key = permute(key, CP_1)
     L, R = key[:28], key[28:]
     for shift in SHIFT:
@@ -200,13 +187,10 @@ def pad(text):
 
 def encrypt_manual(text, key):
     """
-    Manuel DES Şifreleme (Eğitim Amaçlı)
     Anahtarı 8 karaktere zorlar.
     """
-    # Anahtarı 8 karaktere tamamla/kırp (Manuel mod string çalıştığı için string olarak tutuyoruz)
+
     key = key.ljust(8)[:8]
-    
-    # latin-1 encoding ile anahtarı byte'a çevirip işleyelim
     keys = generate_keys(key.encode('latin-1'))
     
     text = pad(text)
@@ -216,15 +200,11 @@ def encrypt_manual(text, key):
         processed_block = des_block(block, keys)
         res.extend(processed_block)
     
-    # Sonucu hex olarak döndürelim
     binary_str = ''.join([str(x) for x in res])
     hex_res = hex(int(binary_str, 2))[2:].upper()
     return hex_res
 
 def decrypt_manual(text, key):
-    """
-    Manuel DES Deşifreleme (Eğitim Amaçlı)
-    """
     try:
         bin_str = bin(int(text, 16))[2:]
         fill_len = (len(text) * 4) - len(bin_str)
@@ -236,7 +216,7 @@ def decrypt_manual(text, key):
 
     key = key.ljust(8)[:8]
     keys = generate_keys(key.encode('latin-1'))
-    keys.reverse() # Deşifreleme için anahtarları tersten kullan
+    keys.reverse()
     
     res = []
     for i in range(0, len(full_bit_array), 64):

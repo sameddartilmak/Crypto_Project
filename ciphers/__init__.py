@@ -7,3 +7,4 @@ from . import affine
 from . import rail_fence
 from . import substitution
 from . import columnar
+from . import hill

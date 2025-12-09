@@ -349,9 +349,9 @@
                     keyInput.type = "text";
                 }
                 else if(algo === 'hill') {
-                    hint.innerText = "Anahtar kelime (4 harf=2x2, 9 harf=3x3 matris).";
-                    keyInput.placeholder = "Örn: GYBNQKURP";
-                    keyInput.type = "text";
+                    hint.innerText = "Matris elemanlarını boşlukla girin (4 sayı=2x2, 9 sayı=3x3).";
+                    keyInput.placeholder = "Örn: 6 24 1 13"; // GYBN harflerinin sayısal karşılığı
+                    keyInput.type = "text"; // Kullanıcı boşluk girebilsin diye text kalmalı
                 }
             }
         }

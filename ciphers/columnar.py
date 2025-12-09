@@ -1,4 +1,3 @@
-# ciphers/columnar.py
 import math
 
 def encrypt(text, key):
