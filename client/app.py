@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # --- TÜM ALGORİTMALARI IMPORT ET ---
-from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar
+from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill
 
 app = Flask(__name__)
 
@@ -43,6 +43,9 @@ def encrypt_route():
             encrypted_text = substitution.encrypt(text, key)
         elif algo == 'columnar':
             encrypted_text = columnar.encrypt(text, key)
+        elif algo =='hill':
+            encrypted_text=hill.encrypt(text,key)
+        
 
         # --- MODERN ŞİFRELEMELER (AES / DES / RSA) ---
         elif algo == 'aes':

@@ -211,7 +211,7 @@
                     <option value="rail_fence">Rail Fence</option>
                     <option value="substitution">Substitution</option>
                     <option value="columnar">Columnar Transposition</option>
-                </optgroup>
+                    <option value="hill">Hill Cipher (Matris)</option> </optgroup>
             </select>
         </div>
         <div class="col form-group">
@@ -338,9 +338,19 @@
                     keyInput.placeholder = "Örn: 3";
                     keyInput.type = "number";
                 }
-                else {
-                    hint.innerText = "Anahtar girin.";
-                    keyInput.placeholder = "Anahtar";
+                else if(algo === 'substitution') {
+                    hint.innerText = "26 harflik karışık alfabe.";
+                    keyInput.placeholder = "Örn: QWERTY...";
+                    keyInput.type = "text";
+                }
+                else if(algo === 'columnar') {
+                    hint.innerText = "Anahtar kelime girin.";
+                    keyInput.placeholder = "Örn: COLUMN";
+                    keyInput.type = "text";
+                }
+                else if(algo === 'hill') {
+                    hint.innerText = "Anahtar kelime (4 harf=2x2, 9 harf=3x3 matris).";
+                    keyInput.placeholder = "Örn: GYBNQKURP";
                     keyInput.type = "text";
                 }
             }
@@ -355,7 +365,6 @@
         const sendBtn = document.getElementById('sendBtn');
         const cipherRes = document.getElementById('cipher-result');
 
-        // Butonu geçici pasif yap
         sendBtn.disabled = true;
 
         // RSA hariç diğerlerinde anahtar boş olamaz
@@ -388,8 +397,6 @@
             if (result.status === 'success') {
                 cipherRes.innerText = result.ciphertext;
                 currentCiphertext = result.ciphertext;
-                
-                // Şifreleme başarılıysa gönder butonu açılır
                 sendBtn.disabled = false;
                 
                 document.getElementById('server-status').innerText = "Bekleniyor...";

@@ -8,7 +8,7 @@ import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # TÜM MODÜLLERİ DAHİL ET (Eksiksiz)
-from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar
+from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill
 
 # RSA Anahtarları Başlangıçta Üretilir
 print("RSA Anahtarları üretiliyor... Lütfen bekleyin.")
@@ -94,6 +94,7 @@ def start_server():
                         elif algo == 'affine': decrypted_text = affine.decrypt(cipher_text, server_key)
                         elif algo == 'rail_fence': decrypted_text = rail_fence.decrypt(cipher_text, server_key)
                         elif algo == 'substitution': decrypted_text = substitution.decrypt(cipher_text, server_key)
+                        elif algo == 'hill': decrypted_text = hill.decrypt(cipher_text, server_key)
                         elif algo == 'columnar': decrypted_text = columnar.decrypt(cipher_text, server_key)
                         else: decrypted_text = "Hata: Bilinmeyen Algoritma"
 

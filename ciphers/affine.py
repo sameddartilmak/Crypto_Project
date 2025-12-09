@@ -1,4 +1,3 @@
-# ciphers/affine.py
 import math
 
 def modInverse(a, m):

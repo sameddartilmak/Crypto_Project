@@ -1,22 +1,19 @@
-# ciphers/aes.py
 from Crypto.Cipher import AES as LibAES
 from Crypto.Util.Padding import pad as lib_pad, unpad as lib_unpad
 import base64
 
-# Anahtarı AES-128 için geçerli hale getiren yardımcı fonksiyon
 def get_valid_key(key):
     """
     AES için anahtarı tam 16 byte (128 bit) yapar.
     Kısa ise null byte ile tamamlar, uzunsa kırpar.
     """
     key_bytes = key.encode('utf-8')
-    # 16 byte'a tamamla veya kırparak eşitle
     key_bytes = key_bytes.ljust(16, b'\0')[:16]
     return key_bytes
 
-# ==========================================
-# KÜTÜPHANELİ MOD
-# ==========================================
+
+# KÜTÜPHANELİ
+
 def encrypt_lib(text, key):
     try:
         key_bytes = get_valid_key(key) # 16 Byte Garanti
@@ -38,11 +35,9 @@ def decrypt_lib(encrypted_text, key):
         return f"Lib Deşifre Hatası: {str(e)}"
 
 
-# ==========================================
-# KÜTÜPHANESİZ (MANUEL) VERSİYON - AES 128
-# ==========================================
 
-# S-Box (Substitution Box)
+# KÜTÜPHANESİZ 
+
 s_box = [
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -190,9 +185,8 @@ def encrypt_manual(text, key):
     Manuel AES-128 Şifreleme (Eğitim Amaçlı)
     Anahtarı 16 byte'a zorlar.
     """
-    # Anahtarı byte'a çevir, 16 byte'a tamamla/kırp
+
     key_bytes = get_valid_key(key)
-    # Manuel algoritma int listesi istediği için dönüştür
     key_as_ints = [b for b in key_bytes]
     
     key_schedule = key_expansion(key_as_ints)
@@ -208,7 +202,7 @@ def encrypt_manual(text, key):
             for r in range(4):
                 encrypted_bytes.append(state[c][r])
                 
-    # Hex olarak döndür
+
     return ''.join(f'{x:02x}' for x in encrypted_bytes).upper()
 
 def decrypt_manual(text, key):
