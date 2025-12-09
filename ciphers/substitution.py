@@ -1,4 +1,3 @@
-# ciphers/substitution.py
 
 def encrypt(text, key):
     """
