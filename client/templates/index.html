@@ -7,185 +7,31 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        /* Genel Sayfa Yapısı */
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #333;
-        }
-
-        /* Ana Kart */
-        .container {
-            width: 100%;
-            max-width: 700px;
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-            margin: 20px;
-        }
-
-        h1 {
-            text-align: center;
-            color: #1e3c72;
-            margin-bottom: 30px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 15px;
-        }
-
-        /* Form Elemanları */
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-            font-size: 0.9rem;
-        }
-
-        select, input, textarea {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e1e1e1;
-            border-radius: 10px;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background-color: #f9f9f9;
-        }
-
-        select:focus, input:focus, textarea:focus {
-            border-color: #2a5298;
-            background-color: #fff;
-            outline: none;
-            box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1);
-        }
-
+        /* CSS Kodları (Değişiklik Yok) */
+        body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #333; }
+        .container { width: 100%; max-width: 700px; background: #ffffff; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); margin: 20px; }
+        h1 { text-align: center; color: #1e3c72; margin-bottom: 30px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; font-size: 0.9rem; }
+        select, input, textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e1e1; border-radius: 10px; box-sizing: border-box; font-family: 'Poppins', sans-serif; font-size: 1rem; transition: all 0.3s ease; background-color: #f9f9f9; }
+        select:focus, input:focus, textarea:focus { border-color: #2a5298; background-color: #fff; outline: none; box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1); }
         textarea { resize: vertical; }
-
-        small {
-            display: block;
-            margin-top: 5px;
-            font-size: 0.85rem;
-            color: #888;
-        }
-
-        /* İki sütunlu yapı */
-        .row {
-            display: flex;
-            gap: 20px;
-        }
+        small { display: block; margin-top: 5px; font-size: 0.85rem; color: #888; }
+        .row { display: flex; gap: 20px; }
         .col { flex: 1; }
-
-        /* Buton Grubu */
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 25px;
-        }
-
-        button {
-            flex: 1;
-            padding: 14px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        #encryptBtn {
-            background: linear-gradient(45deg, #11998e, #38ef7d);
-            color: white;
-        }
-        #encryptBtn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(56, 239, 125, 0.3);
-        }
-
-        #sendBtn {
-            background: linear-gradient(45deg, #2a5298, #4a90e2);
-            color: white;
-        }
-        #sendBtn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(74, 144, 226, 0.4);
-        }
-
-        button:disabled {
-            background: #d6d6d6;
-            color: #888;
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
-        }
-
-        /* Sonuç Alanı */
-        #result-area {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 12px;
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        #result-area h3 {
-            margin-top: 0;
-            color: #1e3c72;
-            font-size: 1.1rem;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
-        }
-
-        .result-row {
-            margin-bottom: 15px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .result-label {
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: #666;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        .result-value {
-            font-family: 'Roboto Mono', monospace;
-            background: #2d3436;
-            color: #00cec9;
-            padding: 10px;
-            border-radius: 6px;
-            word-break: break-all;
-            font-size: 0.95rem;
-            letter-spacing: 0.5px;
-        }
-
+        .btn-group { display: flex; gap: 15px; margin-top: 25px; }
+        button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #encryptBtn { background: linear-gradient(45deg, #11998e, #38ef7d); color: white; }
+        #encryptBtn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(56, 239, 125, 0.3); }
+        #sendBtn { background: linear-gradient(45deg, #2a5298, #4a90e2); color: white; }
+        #sendBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(74, 144, 226, 0.4); }
+        button:disabled { background: #d6d6d6; color: #888; cursor: not-allowed; box-shadow: none; transform: none; }
+        #result-area { margin-top: 30px; padding: 20px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: none; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #result-area h3 { margin-top: 0; color: #1e3c72; font-size: 1.1rem; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .result-row { margin-bottom: 15px; display: flex; flex-direction: column; }
+        .result-label { font-size: 0.85rem; font-weight: bold; color: #666; margin-bottom: 5px; text-transform: uppercase; }
+        .result-value { font-family: 'Roboto Mono', monospace; background: #2d3436; color: #00cec9; padding: 10px; border-radius: 6px; word-break: break-all; font-size: 0.95rem; letter-spacing: 0.5px; }
         .status-success { color: #00b894; font-weight: bold; }
         .status-error { color: #d63031; font-weight: bold; }
     </style>
@@ -201,8 +47,7 @@
             <select id="algorithm" onchange="resetForm()">
                 <optgroup label="Modern Şifreleme (Ödev)">
                     <option value="aes" selected>AES-128</option>
-                    <option value="des">DES</option>
-                    <option value="rsa">RSA-2048 (Asimetrik)</option>
+                    <option value="des">DES-64</option>
                 </optgroup>
                 <optgroup label="Klasik Şifreleme">
                     <option value="sezar">Sezar (Caesar)</option>
@@ -211,7 +56,8 @@
                     <option value="rail_fence">Rail Fence</option>
                     <option value="substitution">Substitution</option>
                     <option value="columnar">Columnar Transposition</option>
-                    <option value="hill">Hill Cipher (Matris)</option> </optgroup>
+                    <option value="hill">Hill Cipher (Matris)</option>
+                </optgroup>
             </select>
         </div>
         <div class="col form-group">
@@ -251,6 +97,11 @@
             <div id="cipher-result" class="result-value">-</div>
         </div>
 
+        <div class="result-row" id="enc-key-row" style="display:none;">
+            <span class="result-label">RSA ile Şifrelenmiş Anahtar (Digital Envelope):</span>
+            <div id="enc-key-result" class="result-value" style="color: #fdcb6e; font-size: 0.8rem;">-</div>
+        </div>
+
         <div class="result-row" style="border-top: 1px dashed #ccc; padding-top: 10px;">
             <span class="result-label">Server Bağlantı Durumu:</span>
             <span id="server-status">-</span>
@@ -265,8 +116,9 @@
 
 <script>
     let currentCiphertext = "";
+    let currentEncryptedKey = null;
 
-    // Sayfa yüklendiğinde placeholder'ları ayarla
+    // Sayfa yüklendiğinde
     window.onload = function() {
         updatePlaceholder();
     };
@@ -276,7 +128,10 @@
         document.getElementById('sendBtn').disabled = true;
         document.getElementById('result-area').style.display = 'none';
         document.getElementById('cipher-result').innerText = "-";
+        document.getElementById('enc-key-result').innerText = "-";
+        document.getElementById('enc-key-row').style.display = 'none';
         currentCiphertext = "";
+        currentEncryptedKey = null;
     }
 
     function updatePlaceholder() {
@@ -285,74 +140,64 @@
         const keyInput = document.getElementById('key');
         const modeSelect = document.getElementById('mode');
         
-        // 1. RSA Kontrolü (Otomatik Anahtar)
-        if(algo === 'rsa') {
-            hint.innerText = "RSA için anahtar Server'dan otomatik alınır.";
-            keyInput.disabled = true;
-            keyInput.placeholder = "Otomatik (Public Key)";
-            keyInput.value = "";
-            keyInput.removeAttribute("maxlength");
-            modeSelect.disabled = true; // RSA'da manuel yok
-        } 
-        else {
-            keyInput.disabled = false;
+        // RSA artık yok, bu yüzden anahtar alanı her zaman aktif
+        keyInput.disabled = false;
             
-            // 2. Modern Şifreler (AES/DES - Mod Seçimi Aktif)
-            if(algo === 'aes' || algo === 'des') {
-                modeSelect.disabled = false;
-                if(algo === 'aes') { 
-                    hint.innerText = "Lütfen 16 karakter giriniz (Eksikse tamamlanır)."; 
-                    keyInput.placeholder = "16 Karakterlik Anahtar";
-                    keyInput.setAttribute("maxlength", "16");
-                    keyInput.type = "text";
-                }
-                else { // des
-                    hint.innerText = "Lütfen 8 karakter giriniz (Eksikse tamamlanır)."; 
-                    keyInput.placeholder = "8 Karakterlik Anahtar";
-                    keyInput.setAttribute("maxlength", "8");
-                    keyInput.type = "text";
-                }
+        // 1. Modern Şifreler (AES/DES - Mod Seçimi Aktif)
+        if(algo === 'aes' || algo === 'des') {
+            modeSelect.disabled = false;
+            if(algo === 'aes') { 
+                hint.innerText = "16 karakter giriniz (Server'a RSA ile şifreli gider)."; 
+                keyInput.placeholder = "16 Karakterlik Anahtar";
+                keyInput.setAttribute("maxlength", "16");
+                keyInput.type = "text";
             }
-            // 3. Klasik Şifreler (Mod Seçimi Pasif - Sadece tek kod var)
-            else {
-                modeSelect.disabled = true;
-                keyInput.removeAttribute("maxlength");
+            else { // des
+                hint.innerText = "8 karakter giriniz (Server'a RSA ile şifreli gider)."; 
+                keyInput.placeholder = "8 Karakterlik Anahtar";
+                keyInput.setAttribute("maxlength", "8");
+                keyInput.type = "text";
+            }
+        }
+        // 2. Klasik Şifreler (Mod Seçimi Pasif)
+        else {
+            modeSelect.disabled = true;
+            keyInput.removeAttribute("maxlength");
 
-                if(algo === 'sezar') {
-                    hint.innerText = "Kaydırma miktarı (Sayı girin).";
-                    keyInput.placeholder = "Örn: 3";
-                    keyInput.type = "number";
-                }
-                else if(algo === 'vigenere') {
-                    hint.innerText = "Anahtar kelime girin.";
-                    keyInput.placeholder = "Örn: ANAHTAR";
-                    keyInput.type = "text";
-                }
-                else if(algo === 'affine') {
-                    hint.innerText = "a,b formatında girin.";
-                    keyInput.placeholder = "Örn: 5,8";
-                    keyInput.type = "text";
-                }
-                else if(algo === 'rail_fence') {
-                    hint.innerText = "Ray sayısı (Sayı girin).";
-                    keyInput.placeholder = "Örn: 3";
-                    keyInput.type = "number";
-                }
-                else if(algo === 'substitution') {
-                    hint.innerText = "26 harflik karışık alfabe.";
-                    keyInput.placeholder = "Örn: QWERTY...";
-                    keyInput.type = "text";
-                }
-                else if(algo === 'columnar') {
-                    hint.innerText = "Anahtar kelime girin.";
-                    keyInput.placeholder = "Örn: COLUMN";
-                    keyInput.type = "text";
-                }
-                else if(algo === 'hill') {
-                    hint.innerText = "Matris elemanlarını boşlukla girin (4 sayı=2x2, 9 sayı=3x3).";
-                    keyInput.placeholder = "Örn: 6 24 1 13"; // GYBN harflerinin sayısal karşılığı
-                    keyInput.type = "text"; // Kullanıcı boşluk girebilsin diye text kalmalı
-                }
+            if(algo === 'sezar') {
+                hint.innerText = "Kaydırma miktarı (Sayı girin).";
+                keyInput.placeholder = "Örn: 3";
+                keyInput.type = "number";
+            }
+            else if(algo === 'vigenere') {
+                hint.innerText = "Anahtar kelime girin (Sadece Harf).";
+                keyInput.placeholder = "Örn: ANAHTAR";
+                keyInput.type = "text";
+            }
+            else if(algo === 'affine') {
+                hint.innerText = "a,b formatında girin.";
+                keyInput.placeholder = "Örn: 5,8";
+                keyInput.type = "text";
+            }
+            else if(algo === 'rail_fence') {
+                hint.innerText = "Ray sayısı (Sayı girin).";
+                keyInput.placeholder = "Örn: 3";
+                keyInput.type = "number";
+            }
+            else if(algo === 'substitution') {
+                hint.innerText = "26 harflik karışık alfabe.";
+                keyInput.placeholder = "Örn: QWERTY...";
+                keyInput.type = "text";
+            }
+            else if(algo === 'columnar') {
+                hint.innerText = "Anahtar kelime girin.";
+                keyInput.placeholder = "Örn: COLUMN";
+                keyInput.type = "text";
+            }
+            else if(algo === 'hill') {
+                hint.innerText = "Matris elemanlarını boşlukla girin (4 sayı=2x2, 9 sayı=3x3).";
+                keyInput.placeholder = "Örn: 6 24 1 13";
+                keyInput.type = "text";
             }
         }
     }
@@ -364,11 +209,12 @@
         const key = document.getElementById('key').value;
         const sendBtn = document.getElementById('sendBtn');
         const cipherRes = document.getElementById('cipher-result');
+        const encKeyRes = document.getElementById('enc-key-result');
 
         sendBtn.disabled = true;
 
-        // RSA hariç diğerlerinde anahtar boş olamaz
-        if(algo !== 'rsa' && !key) {
+        // RSA kalktığı için artık anahtar zorunlu
+        if(!key) {
             alert("Lütfen bir anahtar giriniz.");
             return;
         }
@@ -397,6 +243,17 @@
             if (result.status === 'success') {
                 cipherRes.innerText = result.ciphertext;
                 currentCiphertext = result.ciphertext;
+                
+                // Hibrit Anahtar (Varsa Göster)
+                if(result.encrypted_key) {
+                    currentEncryptedKey = result.encrypted_key;
+                    encKeyRes.innerText = result.encrypted_key.substring(0, 50) + "...";
+                    document.getElementById('enc-key-row').style.display = 'flex';
+                } else {
+                    currentEncryptedKey = null;
+                    document.getElementById('enc-key-row').style.display = 'none';
+                }
+
                 sendBtn.disabled = false;
                 
                 document.getElementById('server-status').innerText = "Bekleniyor...";
@@ -427,7 +284,8 @@
                 body: JSON.stringify({ 
                     algorithm: algo, 
                     mode: mode,
-                    ciphertext: currentCiphertext 
+                    ciphertext: currentCiphertext,
+                    encrypted_key: currentEncryptedKey
                 })
             });
 

@@ -1,22 +1,13 @@
 import math
 
 def modInverse(a, m):
-    """
-    Modüler tersi bulur. (a*x) % m = 1 olan x sayısını arar.
-    """
     for x in range(1, m):
         if (((a % m) * (x % m)) % m == 1):
             return x
     return -1
 
 def encrypt(text, key):
-    """
-    Affine Şifreleme
-    Anahtar (Key) Türü: Tuple veya String "a,b" (Örn: "5,8")
-    a ve 26 aralarında asal olmalıdır.
-    """
     try:
-        # Anahtar string gelirse "5,8" gibi parçala
         if isinstance(key, str):
             parts = key.split(',')
             a = int(parts[0])
@@ -40,10 +31,6 @@ def encrypt(text, key):
     return result
 
 def decrypt(text, key):
-    """
-    Affine Deşifreleme
-    Formül: a^-1 * (x - b) mod 26
-    """
     try:
         if isinstance(key, str):
             parts = key.split(',')

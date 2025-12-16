@@ -4,13 +4,10 @@ import sys
 import os
 import datetime
 
-# Üst klasördeki 'ciphers' paketini görebilmek için yol ekliyoruz
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# TÜM MODÜLLERİ DAHİL ET (Eksiksiz)
 from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill
 
-# RSA Anahtarları Başlangıçta Üretilir
+# RSA Key Üretimi
 print("RSA Anahtarları üretiliyor... Lütfen bekleyin.")
 PRIVATE_KEY, PUBLIC_KEY = rsa.generate_keys()
 print("RSA Anahtarları Hazır!")
@@ -37,54 +34,59 @@ def start_server():
         while True:
             conn, addr = s.accept()
             with conn:
-                data = conn.recv(8192) 
+                data = conn.recv(16384) # Buffer arttırıldı
                 if not data: break
                 
                 try:
                     request = json.loads(data.decode('utf-8'))
                     req_type = request.get('type')
                     
-                    # 1. Public Key İsteği
                     if req_type == 'GET_PUBLIC_KEY':
                         response = {"status": "success", "public_key": PUBLIC_KEY.decode('utf-8')}
                         conn.sendall(json.dumps(response).encode('utf-8'))
                         continue
                     
-                    # 2. Şifre Çözme İsteği
                     algo = request.get('algorithm')
                     mode = request.get('mode')
                     cipher_text = request.get('ciphertext')
-                    
+                    encrypted_key_b64 = request.get('encrypted_key') # Hibrit anahtar
+
                     print(f"\n--- YENİ MESAJ ({algo} - {mode}) ---")
-                    # Ekrana çok uzun metin basmamak için kısaltma
-                    display_text = cipher_text[:50] + "..." if len(cipher_text) > 50 else cipher_text
-                    print(f"Şifreli Metin: {display_text}")
-
+                    
                     decrypted_text = ""
-                    server_key = "RSA Private Key (Gizli)" # Varsayılan
+                    server_key = "Bilinmiyor"
 
-                    # --- ALGORİTMA SEÇİMİ ---
-                    
-                    # A) RSA (Otomatik)
-                    if algo == 'rsa':
-                        print("RSA Mesajı otomatik çözülüyor...")
+                    # --- 1. HİBRİT ÇÖZME (AES / DES) ---
+                    if algo in ['aes', 'des']:
+                        print(f"Hibrit Şifreleme Algılandı ({algo}).")
+                        print("1. Adım: Şifreli Session Key, RSA Private Key ile çözülüyor...")
+                        
+                        if not encrypted_key_b64:
+                            decrypted_text = "Hata: Şifreli anahtar bulunamadı!"
+                        else:
+                            # Önce Anahtarı RSA ile Çöz
+                            session_key = rsa.decrypt(encrypted_key_b64, PRIVATE_KEY)
+                            
+                            if "Hata" in session_key:
+                                decrypted_text = f"Anahtar Çözülemedi: {session_key}"
+                            else:
+                                server_key = session_key # Log için sakla
+                                print(f"2. Adım: Çözülen Anahtar ile Metin Deşifre Ediliyor... Key: {server_key}")
+                                
+                                # Şimdi o anahtarla metni çöz
+                                if algo == 'aes':
+                                    if mode == 'manual': decrypted_text = aes.decrypt_manual(cipher_text, server_key)
+                                    else: decrypted_text = aes.decrypt_lib(cipher_text, server_key)
+                                elif algo == 'des':
+                                    if mode == 'manual': decrypted_text = des.decrypt_manual(cipher_text, server_key)
+                                    else: decrypted_text = des.decrypt_lib(cipher_text, server_key)
+
+                    # --- 2. RSA (Direkt Mesaj) ---
+                    elif algo == 'rsa':
+                        print("RSA Mesajı çözülüyor...")
                         decrypted_text = rsa.decrypt(cipher_text, PRIVATE_KEY)
-                    
-                    # B) Modern Simetrik (AES / DES)
-                    elif algo == 'aes':
-                        print(f"AES Çözme Anahtarını Girin:")
-                        server_key = input(">> ")
-                        if mode == 'manual': decrypted_text = aes.decrypt_manual(cipher_text, server_key)
-                        else: decrypted_text = aes.decrypt_lib(cipher_text, server_key)
 
-                    elif algo == 'des':
-                        print(f"DES Çözme Anahtarını Girin:")
-                        server_key = input(">> ")
-                        if mode == 'manual': decrypted_text = des.decrypt_manual(cipher_text, server_key)
-                        else: decrypted_text = des.decrypt_lib(cipher_text, server_key)
-
-                    # C) Klasik Algoritmalar (Sezar, Vigenere vb.)
-                    # SORUNU ÇÖZEN KISIM BURASI: else bloğu
+                    # --- 3. KLASİK (Eski Usul - Elle Giriş) ---
                     else:
                         print(f"Lütfen {algo.upper()} Anahtarını Girin:")
                         server_key = input(">> ")
@@ -94,11 +96,11 @@ def start_server():
                         elif algo == 'affine': decrypted_text = affine.decrypt(cipher_text, server_key)
                         elif algo == 'rail_fence': decrypted_text = rail_fence.decrypt(cipher_text, server_key)
                         elif algo == 'substitution': decrypted_text = substitution.decrypt(cipher_text, server_key)
-                        elif algo == 'hill': decrypted_text = hill.decrypt(cipher_text, server_key)
                         elif algo == 'columnar': decrypted_text = columnar.decrypt(cipher_text, server_key)
-                        else: decrypted_text = "Hata: Bilinmeyen Algoritma"
+                        elif algo == 'hill': decrypted_text = hill.decrypt(cipher_text, server_key)
+                        else: decrypted_text = f"Hata: Bilinmeyen Algoritma"
 
-                    # --- SONUÇ GÖNDERİMİ ---
+                    # Sonuç Gönder
                     if "Hata" in decrypted_text:
                         status = "Hata"
                         resp = {"status": "error", "message": decrypted_text}
@@ -111,11 +113,7 @@ def start_server():
                     conn.sendall(json.dumps(resp).encode('utf-8'))
 
                 except json.JSONDecodeError: print("JSON Hatası")
-                except Exception as e: 
-                    print(f"Server Hatası: {e}")
-                    # Hata durumunda client'a boş değil hata mesajı dönelim
-                    err_resp = {"status": "error", "message": str(e)}
-                    conn.sendall(json.dumps(err_resp).encode('utf-8'))
+                except Exception as e: print(f"Server Hatası: {e}")
 
 if __name__ == "__main__":
     start_server()

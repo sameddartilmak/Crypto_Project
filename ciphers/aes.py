@@ -183,9 +183,7 @@ def unpad(text):
 def encrypt_manual(text, key):
     """
     Manuel AES-128 Şifreleme (Eğitim Amaçlı)
-    Anahtarı 16 byte'a zorlar.
     """
-
     key_bytes = get_valid_key(key)
     key_as_ints = [b for b in key_bytes]
     

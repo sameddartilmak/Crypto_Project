@@ -28,45 +28,49 @@ def encrypt_route():
     key = data.get('key')        
     
     encrypted_text = ""
+    encrypted_key = None # RSA ile şifrelenmiş anahtar (AES/DES için)
 
     try:
-        # --- KLASİK ŞİFRELEMELER (Bunlarda Mod Ayrımı Yoktur) ---
-        if algo == 'sezar':
-            encrypted_text = caesar.encrypt(text, key)
-        elif algo == 'vigenere':
-            encrypted_text = vigenere.encrypt(text, key)
-        elif algo == 'affine':
-            encrypted_text = affine.encrypt(text, key)
-        elif algo == 'rail_fence':
-            encrypted_text = rail_fence.encrypt(text, key)
-        elif algo == 'substitution':
-            encrypted_text = substitution.encrypt(text, key)
-        elif algo == 'columnar':
-            encrypted_text = columnar.encrypt(text, key)
-        elif algo =='hill':
-            encrypted_text=hill.encrypt(text,key)
-        
+        # --- HİBRİT SİSTEM (AES ve DES) ---
+        if algo in ['aes', 'des']:
+            # 1. Önce Mesajı Şifrele (Kullanıcının girdiği anahtarla)
+            if algo == 'aes':
+                if mode == 'manual': encrypted_text = aes.encrypt_manual(text, key)
+                else: encrypted_text = aes.encrypt_lib(text, key)
+            elif algo == 'des':
+                if mode == 'manual': encrypted_text = des.encrypt_manual(text, key) 
+                else: encrypted_text = des.encrypt_lib(text, key)
+            
+            # 2. Sonra ANAHTARI Şifrele (RSA ile) - Hibrit Kısım
+            public_key = get_server_public_key()
+            if not public_key:
+                return jsonify({'status': 'error', 'message': 'Server Public Key alınamadı!'})
+            
+            # Anahtarı RSA ile şifreliyoruz
+            encrypted_key = rsa.encrypt(key, public_key)
 
-        # --- MODERN ŞİFRELEMELER (AES / DES / RSA) ---
-        elif algo == 'aes':
-            if mode == 'manual':
-                encrypted_text = aes.encrypt_manual(text, key)
-            else:
-                encrypted_text = aes.encrypt_lib(text, key)
-                
-        elif algo == 'des':
-            if mode == 'manual':
-                encrypted_text = des.encrypt_manual(text, key) 
-            else:
-                encrypted_text = des.encrypt_lib(text, key)
-                
+        # --- RSA (Sadece Mesaj) ---
         elif algo == 'rsa':
             public_key = get_server_public_key()
             if not public_key:
                 return jsonify({'status': 'error', 'message': 'Server Public Key alınamadı!'})
             encrypted_text = rsa.encrypt(text, public_key)
 
-        return jsonify({'status': 'success', 'ciphertext': encrypted_text})
+        # --- KLASİK ŞİFRELEMELER (Key şifrelenmez) ---
+        else:
+            if algo == 'sezar': encrypted_text = caesar.encrypt(text, key)
+            elif algo == 'vigenere': encrypted_text = vigenere.encrypt(text, key)
+            elif algo == 'affine': encrypted_text = affine.encrypt(text, key)
+            elif algo == 'rail_fence': encrypted_text = rail_fence.encrypt(text, key)
+            elif algo == 'substitution': encrypted_text = substitution.encrypt(text, key)
+            elif algo == 'columnar': encrypted_text = columnar.encrypt(text, key)
+            elif algo == 'hill': encrypted_text = hill.encrypt(text, key)
+
+        return jsonify({
+            'status': 'success', 
+            'ciphertext': encrypted_text,
+            'encrypted_key': encrypted_key # AES/DES ise dolu, diğerlerinde null döner
+        })
 
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
@@ -90,7 +94,8 @@ def send_server():
         'type': 'MESSAGE',
         'algorithm': data.get('algorithm'),
         'mode': data.get('mode'),
-        'ciphertext': data.get('ciphertext')
+        'ciphertext': data.get('ciphertext'),
+        'encrypted_key': data.get('encrypted_key') # Şifreli anahtarı da gönderiyoruz
     }
     
     try:
