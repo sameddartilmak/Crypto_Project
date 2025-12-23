@@ -7,8 +7,8 @@ import os
 # Üst klasördeki modülleri görebilmek için yol ekle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# --- TÜM ALGORİTMALARI IMPORT ET ---
-from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill
+# --- TÜM ALGORİTMALARI IMPORT ET (DÜZELTİLDİ: 'route' yerine 'root') ---
+from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill, polybius, vernam, playfair, root
 
 app = Flask(__name__)
 
@@ -31,9 +31,9 @@ def encrypt_route():
     encrypted_key = None # RSA ile şifrelenmiş anahtar (AES/DES için)
 
     try:
-        # --- HİBRİT SİSTEM (AES ve DES) ---
+        # --- 1. HİBRİT SİSTEM (AES ve DES) ---
         if algo in ['aes', 'des']:
-            # 1. Önce Mesajı Şifrele (Kullanıcının girdiği anahtarla)
+            # Önce Mesajı Şifrele
             if algo == 'aes':
                 if mode == 'manual': encrypted_text = aes.encrypt_manual(text, key)
                 else: encrypted_text = aes.encrypt_lib(text, key)
@@ -41,22 +41,21 @@ def encrypt_route():
                 if mode == 'manual': encrypted_text = des.encrypt_manual(text, key) 
                 else: encrypted_text = des.encrypt_lib(text, key)
             
-            # 2. Sonra ANAHTARI Şifrele (RSA ile) - Hibrit Kısım
+            # Sonra ANAHTARI RSA ile Şifrele
             public_key = get_server_public_key()
             if not public_key:
                 return jsonify({'status': 'error', 'message': 'Server Public Key alınamadı!'})
             
-            # Anahtarı RSA ile şifreliyoruz
             encrypted_key = rsa.encrypt(key, public_key)
 
-        # --- RSA (Sadece Mesaj) ---
+        # --- 2. RSA (Sadece Mesaj) ---
         elif algo == 'rsa':
             public_key = get_server_public_key()
             if not public_key:
                 return jsonify({'status': 'error', 'message': 'Server Public Key alınamadı!'})
             encrypted_text = rsa.encrypt(text, public_key)
 
-        # --- KLASİK ŞİFRELEMELER (Key şifrelenmez) ---
+        # --- 3. KLASİK ŞİFRELEMELER ---
         else:
             if algo == 'sezar': encrypted_text = caesar.encrypt(text, key)
             elif algo == 'vigenere': encrypted_text = vigenere.encrypt(text, key)
@@ -65,6 +64,10 @@ def encrypt_route():
             elif algo == 'substitution': encrypted_text = substitution.encrypt(text, key)
             elif algo == 'columnar': encrypted_text = columnar.encrypt(text, key)
             elif algo == 'hill': encrypted_text = hill.encrypt(text, key)
+            elif algo == 'polybius': encrypted_text = polybius.encrypt(text, key)
+            elif algo == 'vernam':  encrypted_text = vernam.encrypt(text, key)
+            elif algo == 'playfair': encrypted_text = playfair.encrypt(text, key)
+            elif algo == 'root':  encrypted_text = root.encrypt(text, key) # DÜZELTİLDİ: root.encrypt
 
         return jsonify({
             'status': 'success', 
@@ -95,7 +98,7 @@ def send_server():
         'algorithm': data.get('algorithm'),
         'mode': data.get('mode'),
         'ciphertext': data.get('ciphertext'),
-        'encrypted_key': data.get('encrypted_key') # Şifreli anahtarı da gönderiyoruz
+        'encrypted_key': data.get('encrypted_key')
     }
     
     try:

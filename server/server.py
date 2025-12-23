@@ -5,7 +5,10 @@ import os
 import datetime
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill
+
+# --- TÜM MODÜLLERİ EKSİKSİZ IMPORT ET ---
+# DİKKAT: 'route' değil 'root' olarak import ediyoruz çünkü dosya adı root.py
+from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill, polybius, vernam, playfair, root
 
 # RSA Key Üretimi
 print("RSA Anahtarları üretiliyor... Lütfen bekleyin.")
@@ -34,7 +37,7 @@ def start_server():
         while True:
             conn, addr = s.accept()
             with conn:
-                data = conn.recv(16384) # Buffer arttırıldı
+                data = conn.recv(16384) # Buffer büyük tutuldu
                 if not data: break
                 
                 try:
@@ -81,7 +84,7 @@ def start_server():
                                     if mode == 'manual': decrypted_text = des.decrypt_manual(cipher_text, server_key)
                                     else: decrypted_text = des.decrypt_lib(cipher_text, server_key)
 
-                    # --- 2. RSA (Direkt Mesaj) ---
+                    # --- 2. RSA (Direkt Mesaj - Projede kullanılmıyor ama destekler) ---
                     elif algo == 'rsa':
                         print("RSA Mesajı çözülüyor...")
                         decrypted_text = rsa.decrypt(cipher_text, PRIVATE_KEY)
@@ -98,6 +101,13 @@ def start_server():
                         elif algo == 'substitution': decrypted_text = substitution.decrypt(cipher_text, server_key)
                         elif algo == 'columnar': decrypted_text = columnar.decrypt(cipher_text, server_key)
                         elif algo == 'hill': decrypted_text = hill.decrypt(cipher_text, server_key)
+                        
+                        # --- YENİ EKLENENLER ---
+                        elif algo == 'polybius': decrypted_text = polybius.decrypt(cipher_text, server_key)
+                        elif algo == 'vernam': decrypted_text = vernam.decrypt(cipher_text, server_key)
+                        elif algo == 'playfair': decrypted_text = playfair.decrypt(cipher_text, server_key)
+                        elif algo == 'root': decrypted_text = root.decrypt(cipher_text, server_key) # root.decrypt kullanıldı
+                        
                         else: decrypted_text = f"Hata: Bilinmeyen Algoritma"
 
                     # Sonuç Gönder
