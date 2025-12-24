@@ -7,21 +7,16 @@ import secrets
 import string
 import time
 import base64
-import struct  # YENİ: Veri boyutunu paketlemek için şart
-
-# Üst klasördeki modülleri görebilmek için yol ekle
+import struct 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# --- TÜM MODÜLLERİ EKSİKSİZ IMPORT ET ---
 from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill, polybius, vernam, playfair, root
 
-# RSA Key Üretimi
 print("\n" + "="*50)
 print("SERVER BAŞLATILIYOR...")
 print("RSA Anahtarları üretiliyor... Lütfen bekleyin.")
 PRIVATE_KEY, PUBLIC_KEY = rsa.generate_keys()
 
-# KAYIT ANA KLASÖRÜ
 MAIN_SAVE_DIR = "server_received_files"
 if not os.path.exists(MAIN_SAVE_DIR):
     os.makedirs(MAIN_SAVE_DIR)
@@ -32,7 +27,6 @@ print("="*50 + "\n")
 HOST = '127.0.0.1'
 PORT = 65432
 
-# YARDIMCI FONKSİYON: Tam olarak n byte veri gelene kadar bekler (Büyük dosyalar için kritik)
 def recv_all(sock, n):
     data = b''
     while len(data) < n:
@@ -99,30 +93,22 @@ def start_server():
             try:
                 conn, addr = server_socket.accept()
                 with conn:
-                    # 1. ADIM: İlk 4 byte'ı oku (Bu verinin uzunluğudur)
-                    # struct.calcsize('>I') -> 4 byte
                     raw_msglen = recv_all(conn, 4)
                     if not raw_msglen: break
                     
-                    # Verinin uzunluğunu çöz (Big Endian Integer)
                     msglen = struct.unpack('>I', raw_msglen)[0]
                     
-                    # 2. ADIM: Belirtilen uzunluk kadar veriyi bekle
                     data = recv_all(conn, msglen)
                     if not data: break
                     
                     try:
                         request = json.loads(data.decode('utf-8'))
                         req_type = request.get('type')
-                        
-                        # Public Key İsteği
+
                         if req_type == 'GET_PUBLIC_KEY':
                             payload = json.dumps({"status": "success", "public_key": PUBLIC_KEY.decode('utf-8')}).encode('utf-8')
-                            # Cevabı da uzunluk bilgisiyle gönder
                             conn.sendall(struct.pack('>I', len(payload)) + payload)
                             continue
-                        
-                        # --- MESAJ/DOSYA GELDİ ---
                         algo = request.get('algorithm')
                         mode = request.get('mode')
                         cipher_text = request.get('ciphertext')
@@ -136,7 +122,6 @@ def start_server():
                         decrypted_text = ""
                         incoming_key = ""
 
-                        # --- 1. DEŞİFRELEME ---
                         if algo in ['aes', 'des']:
                             if not encrypted_key_b64:
                                 decrypted_text = "Hata: Şifreli anahtar pakette yok!"
@@ -172,12 +157,11 @@ def start_server():
                             elif algo == 'root': decrypted_text = root.decrypt(cipher_text, incoming_key)
                             else: decrypted_text = f"Hata: Bilinmeyen Algoritma"
 
-                        # --- DOSYA KAYDETME VE KLASÖRLEME ---
                         if filename and "Hata" not in decrypted_text:
                             try:
-                                # Base64 verisini binary'ye çevirip kaydet
+
                                 file_data = base64.b64decode(decrypted_text)
-                                save_path = get_save_path(filename) # Klasörü belirle
+                                save_path = get_save_path(filename)
                                 
                                 with open(save_path, "wb") as f:
                                     f.write(file_data)
@@ -194,8 +178,8 @@ def start_server():
                         print("-" * 50)
                         
                         log_to_file(f"{algo}", cipher_text, incoming_key, decrypted_text, "Alındı")
+                        
 
-                        # --- 2. CEVAP GÖNDERME ---
                         reply_msg = ""
                         server_ciphertext = ""
                         new_server_key = ""
@@ -234,8 +218,7 @@ def start_server():
 
                             except Exception as enc_err:
                                 server_ciphertext = f"Cevap Şifreleme Hatası: {enc_err}"
-                        
-                        # Cevabı hazırla
+
                         resp_dict = {
                             "status": "success", 
                             "plaintext": decrypted_text,
@@ -245,7 +228,6 @@ def start_server():
                         
                         resp_bytes = json.dumps(resp_dict).encode('utf-8')
                         
-                        # GÜVENLİ GÖNDERİM: [4 Byte Boyut] + [Veri]
                         conn.sendall(struct.pack('>I', len(resp_bytes)) + resp_bytes)
                         print(f"✅  Cevap Gönderildi. ({duration}s)\n")
 

@@ -71,7 +71,6 @@ def encrypt_route():
     duration = 0
 
     try:
-        # --- HİBRİT SİSTEM (AES ve DES) ---
         if algo in ['aes', 'des']:
             start_time = time.perf_counter() 
             
@@ -90,7 +89,6 @@ def encrypt_route():
                 return jsonify({'status': 'error', 'message': 'Server Kapalı veya Ulaşılamıyor!'})
             encrypted_key = rsa.encrypt(key, public_key)
 
-        # --- RSA ---
         elif algo == 'rsa':
             public_key = get_server_public_key()
             if not public_key:
@@ -132,13 +130,11 @@ def get_server_public_key():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((SERVER_HOST, SERVER_PORT))
             
-            # İsteği hazırla
+
             msg = json.dumps({"type": "GET_PUBLIC_KEY"}).encode('utf-8')
-            
-            # GÜVENLİ GÖNDERİM: [4 Byte Boyut] + [Veri]
+
             s.sendall(struct.pack('>I', len(msg)) + msg)
-            
-            # GÜVENLİ ALIM: Önce boyut, sonra veri
+
             raw_msglen = recv_all(s, 4)
             if not raw_msglen: return None
             
@@ -150,7 +146,6 @@ def get_server_public_key():
     except:
         return None
 
-# --- 3. SERVER'A GÖNDER VE CEVABI ÇÖZ ---
 @app.route('/send_to_server', methods=['POST'])
 def send_server():
     data = request.json
@@ -170,19 +165,15 @@ def send_server():
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((SERVER_HOST, SERVER_PORT))
-            
-            # 1. GÜVENLİ GÖNDERİM: Önce verinin boyutunu (4 byte), sonra kendisini gönder
-            # '>I' formatı: Big Endian Unsigned Integer (4 byte)
+
             s.sendall(struct.pack('>I', len(payload)) + payload)
-            
-            # 2. GÜVENLİ ALIM: Server'dan gelen cevabın boyutunu oku
+
             raw_msglen = recv_all(s, 4)
             if not raw_msglen:
                 return jsonify({'status': 'error', 'message': 'Server cevap vermedi veya bağlantı koptu.'})
             
             msglen = struct.unpack('>I', raw_msglen)[0]
-            
-            # 3. Tam boyutu bildiğimiz için o kadar veriyi bekle ve oku
+
             response_data = recv_all(s, msglen)
             if not response_data:
                 return jsonify({'status': 'error', 'message': 'Server cevabı eksik geldi.'})
