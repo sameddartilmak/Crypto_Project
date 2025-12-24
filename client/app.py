@@ -6,6 +6,7 @@ import os
 import time
 import secrets
 import string
+import struct # YENİ: Veri boyutunu paketlemek için gerekli
 
 # Üst klasördeki modülleri görebilmek için yol ekle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -17,6 +18,15 @@ app = Flask(__name__)
 
 SERVER_HOST = '127.0.0.1'
 SERVER_PORT = 65432
+
+# YARDIMCI FONKSİYON: Tam veri okuma (Socket kopmalarını önler)
+def recv_all(sock, n):
+    data = b''
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet: return None
+        data += packet
+    return data
 
 @app.route('/')
 def index():
@@ -35,7 +45,7 @@ def generate_key_route():
         elif algo == 'des': key = secrets.token_urlsafe(8)[:8]   
         elif algo == 'vernam':
             if text_length > 0: key = ''.join(secrets.choice(string.ascii_uppercase) for _ in range(text_length))
-            else: return jsonify({'status': 'error', 'message': 'Vernam için metin girmelisiniz!'})
+            else: return jsonify({'status': 'error', 'message': 'Vernam için metin/dosya girin!'})
         elif algo == 'affine': key = "5,8" 
         elif algo == 'hill': key = "6 24 1 13" 
         elif algo == 'playfair': key = "MONARCHY"
@@ -63,38 +73,28 @@ def encrypt_route():
     try:
         # --- HİBRİT SİSTEM (AES ve DES) ---
         if algo in ['aes', 'des']:
-            # 1. ADIM: Hassas Süre Ölçümü (Sadece Şifreleme)
             start_time = time.perf_counter() 
             
             if algo == 'aes':
-                # Blokları açıkça ayırıyoruz
-                if mode == 'manual':
-                    # Manuel Mod (Yavaş Olmalı)
-                    encrypted_text = aes.encrypt_manual(text, key)
-                else:
-                    # Kütüphane Modu (Hızlı Olmalı)
-                    encrypted_text = aes.encrypt_lib(text, key)
-                    
+                if mode == 'manual': encrypted_text = aes.encrypt_manual(text, key)
+                else: encrypted_text = aes.encrypt_lib(text, key)
             elif algo == 'des':
-                if mode == 'manual':
-                    encrypted_text = des.encrypt_manual(text, key) 
-                else:
-                    encrypted_text = des.encrypt_lib(text, key)
+                if mode == 'manual': encrypted_text = des.encrypt_manual(text, key) 
+                else: encrypted_text = des.encrypt_lib(text, key)
             
             end_time = time.perf_counter()
-            duration = round(end_time - start_time, 6) # Hassas ölçüm
+            duration = round(end_time - start_time, 6)
 
-            # 2. ADIM: RSA İşlemleri (Süreye dahil değil)
             public_key = get_server_public_key()
             if not public_key:
-                return jsonify({'status': 'error', 'message': 'Server Public Key alınamadı!'})
+                return jsonify({'status': 'error', 'message': 'Server Kapalı veya Ulaşılamıyor!'})
             encrypted_key = rsa.encrypt(key, public_key)
 
         # --- RSA ---
         elif algo == 'rsa':
             public_key = get_server_public_key()
             if not public_key:
-                return jsonify({'status': 'error', 'message': 'Server Public Key alınamadı!'})
+                return jsonify({'status': 'error', 'message': 'Server Kapalı veya Ulaşılamıyor!'})
             
             start_time = time.perf_counter()
             encrypted_text = rsa.encrypt(text, public_key)
@@ -103,7 +103,6 @@ def encrypt_route():
         # --- KLASİK ŞİFRELEMELER ---
         else:
             start_time = time.perf_counter()
-            
             if algo == 'sezar': encrypted_text = caesar.encrypt(text, key)
             elif algo == 'vigenere': encrypted_text = vigenere.encrypt(text, key)
             elif algo == 'affine': encrypted_text = affine.encrypt(text, key)
@@ -115,7 +114,6 @@ def encrypt_route():
             elif algo == 'vernam':  encrypted_text = vernam.encrypt(text, key)
             elif algo == 'playfair': encrypted_text = playfair.encrypt(text, key)
             elif algo == 'root':  encrypted_text = root.encrypt(text, key)
-            
             duration = round(time.perf_counter() - start_time, 6)
 
         return jsonify({
@@ -123,7 +121,7 @@ def encrypt_route():
             'ciphertext': encrypted_text,
             'encrypted_key': encrypted_key,
             'duration': duration,
-            'mode_used': mode # Hangi modun kullanıldığını client'a geri bildir (Test için)
+            'mode_used': mode
         })
 
     except Exception as e:
@@ -133,11 +131,22 @@ def get_server_public_key():
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((SERVER_HOST, SERVER_PORT))
-            payload = {"type": "GET_PUBLIC_KEY"}
-            s.sendall(json.dumps(payload).encode('utf-8'))
-            data = s.recv(4096)
-            resp = json.loads(data.decode('utf-8'))
-            return resp.get('public_key')
+            
+            # İsteği hazırla
+            msg = json.dumps({"type": "GET_PUBLIC_KEY"}).encode('utf-8')
+            
+            # GÜVENLİ GÖNDERİM: [4 Byte Boyut] + [Veri]
+            s.sendall(struct.pack('>I', len(msg)) + msg)
+            
+            # GÜVENLİ ALIM: Önce boyut, sonra veri
+            raw_msglen = recv_all(s, 4)
+            if not raw_msglen: return None
+            
+            msglen = struct.unpack('>I', raw_msglen)[0]
+            data = recv_all(s, msglen)
+            
+            if not data: return None
+            return json.loads(data.decode('utf-8')).get('public_key')
     except:
         return None
 
@@ -145,27 +154,39 @@ def get_server_public_key():
 @app.route('/send_to_server', methods=['POST'])
 def send_server():
     data = request.json
+    client_key = data.get('client_key')
     algo = data.get('algorithm')
     mode = data.get('mode')
-    ciphertext = data.get('ciphertext')
-    encrypted_key = data.get('encrypted_key')
-    client_key = data.get('client_key')
 
-    payload = {
+    payload = json.dumps({
         'type': 'MESSAGE',
         'algorithm': algo,
         'mode': mode,
-        'ciphertext': ciphertext,
-        'encrypted_key': encrypted_key
-    }
+        'ciphertext': data.get('ciphertext'),
+        'encrypted_key': data.get('encrypted_key'),
+        'filename': data.get('filename')
+    }).encode('utf-8')
     
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((SERVER_HOST, SERVER_PORT))
-            s.sendall(json.dumps(payload).encode('utf-8'))
             
-            # Server'dan cevap bekle
-            response_data = s.recv(16384)
+            # 1. GÜVENLİ GÖNDERİM: Önce verinin boyutunu (4 byte), sonra kendisini gönder
+            # '>I' formatı: Big Endian Unsigned Integer (4 byte)
+            s.sendall(struct.pack('>I', len(payload)) + payload)
+            
+            # 2. GÜVENLİ ALIM: Server'dan gelen cevabın boyutunu oku
+            raw_msglen = recv_all(s, 4)
+            if not raw_msglen:
+                return jsonify({'status': 'error', 'message': 'Server cevap vermedi veya bağlantı koptu.'})
+            
+            msglen = struct.unpack('>I', raw_msglen)[0]
+            
+            # 3. Tam boyutu bildiğimiz için o kadar veriyi bekle ve oku
+            response_data = recv_all(s, msglen)
+            if not response_data:
+                return jsonify({'status': 'error', 'message': 'Server cevabı eksik geldi.'})
+            
             server_resp = json.loads(response_data.decode('utf-8'))
             
             if server_resp.get('status') == 'error':
@@ -186,7 +207,7 @@ def send_server():
                 elif algo == 'des':
                     if mode == 'manual': decrypted_reply = des.decrypt_manual(server_ciphertext, key_to_use)
                     else: decrypted_reply = des.decrypt_lib(server_ciphertext, key_to_use)
-                elif algo == 'rsa': decrypted_reply = "RSA desteklenmiyor."
+                elif algo == 'rsa': decrypted_reply = "RSA ile cevap desteklenmiyor."
                 elif algo == 'sezar': decrypted_reply = caesar.decrypt(server_ciphertext, key_to_use)
                 elif algo == 'vigenere': decrypted_reply = vigenere.decrypt(server_ciphertext, key_to_use)
                 elif algo == 'affine': decrypted_reply = affine.decrypt(server_ciphertext, key_to_use)
@@ -211,7 +232,7 @@ def send_server():
             })
 
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        return jsonify({'status': 'error', 'message': f"Bağlantı Hatası: {str(e)}"})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

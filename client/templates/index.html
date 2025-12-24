@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Güvenli Mesajlaşma</title>
+    <title>Güvenli Mesajlaşma & Dosya Transferi</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
@@ -13,14 +13,13 @@
         h1 { text-align: center; color: #1e3c72; margin-bottom: 30px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; font-size: 0.9rem; }
-        select, input, textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e1e1; border-radius: 10px; box-sizing: border-box; font-family: 'Poppins', sans-serif; font-size: 1rem; transition: all 0.3s ease; background-color: #f9f9f9; }
+        select, input[type="text"], textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e1e1; border-radius: 10px; box-sizing: border-box; font-family: 'Poppins', sans-serif; font-size: 1rem; transition: all 0.3s ease; background-color: #f9f9f9; }
         select:focus, input:focus, textarea:focus { border-color: #2a5298; background-color: #fff; outline: none; box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1); }
         textarea { resize: vertical; }
         small { display: block; margin-top: 5px; font-size: 0.85rem; color: #888; }
         .row { display: flex; gap: 20px; }
         .col { flex: 1; }
         
-        /* Yeni: Anahtar Alanı ve Butonu */
         .key-wrapper { display: flex; gap: 10px; }
         .key-wrapper input { flex: 1; }
         .random-btn { background: #e67e22; color: white; padding: 0 20px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; transition: 0.3s; }
@@ -29,10 +28,22 @@
         .btn-group { display: flex; gap: 15px; margin-top: 25px; }
         button.main-btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         #encryptBtn { background: linear-gradient(45deg, #11998e, #38ef7d); color: white; }
-        #encryptBtn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(56, 239, 125, 0.3); }
         #sendBtn { background: linear-gradient(45deg, #2a5298, #4a90e2); color: white; }
-        #sendBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(74, 144, 226, 0.4); }
         button:disabled { background: #d6d6d6; color: #888; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* YENİ: Dosya Yükleme Alanı */
+        .file-upload-wrapper {
+            border: 2px dashed #cbd5e0;
+            background-color: #f8fafc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .file-upload-wrapper:hover { background-color: #edf2f7; border-color: #2a5298; }
+        .file-upload-wrapper input[type="file"] { display: none; }
+        .file-upload-label { cursor: pointer; color: #2a5298; font-weight: 600; display: block; }
 
         #result-area { margin-top: 30px; padding: 20px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: none; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -83,8 +94,17 @@
     </div>
 
     <div class="form-group">
-        <label for="text">Mesaj</label>
-        <textarea id="text" rows="3" placeholder="Gizli mesajınızı buraya yazın..."></textarea>
+        <label>Dosya veya Mesaj Gönder</label>
+        <div class="file-upload-wrapper" onclick="document.getElementById('fileInput').click()">
+            <span class="file-upload-label">📂 Dosya Seçmek İçin Tıkla (Resim, Word, PDF...)</span>
+            <input type="file" id="fileInput" onchange="handleFileUpload()">
+            <small id="file-name-display" style="margin-top: 5px; display: block; color: #666;">Henüz dosya seçilmedi.</small>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="text">Mesaj / Dosya İçeriği (Base64)</label>
+        <textarea id="text" rows="4" placeholder="Mesajınızı buraya yazın veya yukarıdan dosya seçin..."></textarea>
     </div>
 
     <div class="form-group">
@@ -115,7 +135,7 @@
         </div>
 
         <div class="result-row" id="enc-key-row" style="display:none;">
-            <span class="result-label">RSA ile Şifrelenmiş Anahtar (Digital Envelope):</span>
+            <span class="result-label">RSA ile Şifrelenmiş Anahtar:</span>
             <div id="enc-key-result" class="result-value" style="color: #fdcb6e; font-size: 0.8rem;">-</div>
         </div>
 
@@ -130,8 +150,11 @@
         </div>
 
         <div class="result-row" id="server-reply-area" style="display:none; margin-top: 10px;">
-            <span class="result-label">📩 Server'dan Gelen Şifreli Cevap (Sizin için çözüldü):</span>
+            <span class="result-label">📩 Server'dan Gelen Cevap:</span>
             <div id="server-reply-decrypted" class="result-value" style="color: #55efc4; border: 2px solid #55efc4;">-</div>
+            
+            <span class="result-label" style="margin-top:5px;">🔑 Server'ın Kullandığı Yeni Anahtar:</span>
+            <div id="server-key-used" class="result-value" style="font-size: 0.85rem; color: #a29bfe;">-</div>
         </div>
     </div>
 </div>
@@ -139,8 +162,38 @@
 <script>
     let currentCiphertext = "";
     let currentEncryptedKey = null;
+    let selectedFilename = null; // Dosya adı saklamak için
 
     window.onload = function() { updatePlaceholder(); };
+
+    // YENİ: DOSYA İŞLEME FONKSİYONU
+    function handleFileUpload() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        const fileNameDisplay = document.getElementById('file-name-display');
+        
+        if (file) {
+            selectedFilename = file.name; // Dosya adını sakla
+            fileNameDisplay.innerText = "Seçilen Dosya: " + file.name + " (" + (file.size / 1024).toFixed(2) + " KB)";
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                // Base64 verisinin başındaki "data:image/png;base64," kısmını temizliyoruz
+                // Sadece ham veriyi alıyoruz
+                const base64Content = e.target.result.split(',')[1];
+                document.getElementById('text').value = base64Content;
+                
+                // Kullanıcıya bilgi ver
+                // alert("Dosya Base64 formatına çevrildi ve Mesaj kutusuna yazıldı!");
+            };
+            
+            reader.readAsDataURL(file); // Dosyayı Base64 formatında oku
+        } else {
+            selectedFilename = null;
+            fileNameDisplay.innerText = "Henüz dosya seçilmedi.";
+        }
+    }
 
     function resetForm() {
         updatePlaceholder();
@@ -149,6 +202,7 @@
         document.getElementById('server-reply-area').style.display = 'none';
         currentCiphertext = "";
         currentEncryptedKey = null;
+        // Dosya seçimini sıfırlama, kullanıcı belki aynı dosyayı başka modda denemek ister
     }
 
     function updatePlaceholder() {
@@ -156,7 +210,6 @@
         const hint = document.getElementById('key-hint');
         const keyInput = document.getElementById('key');
         
-        // RSA yok, anahtar hep aktif
         keyInput.disabled = false;
         
         if(algo === 'aes') { hint.innerText = "16 Karakter (AES-128)"; keyInput.setAttribute("maxlength", "16"); }
@@ -166,7 +219,6 @@
         else { hint.innerText = "Anahtar girin veya rastgele üretin."; keyInput.removeAttribute("maxlength"); }
     }
 
-    // --- YENİ: RASTGELE ANAHTAR ---
     async function generateRandomKey() {
         const algo = document.getElementById('algorithm').value;
         const text = document.getElementById('text').value;
@@ -177,7 +229,7 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ 
                     algorithm: algo,
-                    text_length: text.length // Vernam için lazım
+                    text_length: text.length 
                 })
             });
             const result = await response.json();
@@ -201,7 +253,7 @@
 
         sendBtn.disabled = true;
         if(!key) { alert("Lütfen anahtar girin."); return; }
-        if(!text) { alert("Metin girin."); return; }
+        if(!text) { alert("Metin veya Dosya girin."); return; }
 
         try {
             const response = await fetch('/encrypt', {
@@ -215,9 +267,11 @@
             resArea.style.display = 'block';
             
             if (result.status === 'success') {
-                cipherRes.innerText = result.ciphertext;
+                // Ciphertext çok uzun olabilir, hepsini gösterme
+                cipherRes.innerText = result.ciphertext.substring(0, 200) + "... (Toplam " + result.ciphertext.length + " karakter)";
+                
                 currentCiphertext = result.ciphertext;
-                timeRes.innerText = result.duration; // Süreyi yazdır
+                timeRes.innerText = result.duration; 
                 
                 if(result.encrypted_key) {
                     currentEncryptedKey = result.encrypted_key;
@@ -243,9 +297,9 @@
         const statusSpan = document.getElementById('server-status');
         const plainSpan = document.getElementById('server-plaintext');
         const sendBtn = document.getElementById('sendBtn');
-        const key = document.getElementById('key').value; // Cevabı çözmek için lazım
+        const key = document.getElementById('key').value;
 
-        statusSpan.innerText = "Server bekleniyor...";
+        statusSpan.innerText = "Dosya/Mesaj gönderiliyor...";
         sendBtn.disabled = true;
         
         try {
@@ -257,21 +311,29 @@
                     mode: mode, 
                     ciphertext: currentCiphertext,
                     encrypted_key: currentEncryptedKey,
-                    client_key: key // Hibrit olmayanlar için anahtarı gönderiyoruz ki cevabı çözebilelim
+                    client_key: key,
+                    filename: selectedFilename // Dosya adını gönder
                 })
             });
 
             const result = await response.json();
             
             if (result.status === 'success') {
-                statusSpan.innerHTML = '<span class="status-success">✓ MESAJ İLETİLDİ & CEVAP ALINDI</span>';
-                plainSpan.innerText = result.plaintext;
+                statusSpan.innerHTML = '<span class="status-success">✓ BAŞARILI</span>';
                 
-                // Server cevabını göster
+                // Plaintext çok uzunsa kısalt
+                let plain = result.plaintext || "";
+                if(plain.length > 200) plain = plain.substring(0, 200) + "... [Devamı var]";
+                plainSpan.innerText = plain;
+                
                 const replyArea = document.getElementById('server-reply-area');
                 const replyVal = document.getElementById('server-reply-decrypted');
+                const replyKeyVal = document.getElementById('server-key-used');
+                
                 replyArea.style.display = 'flex';
+                replyArea.style.flexDirection = 'column';
                 replyVal.innerText = result.server_reply_decrypted;
+                replyKeyVal.innerText = result.server_key_used;
 
             } else {
                 statusSpan.innerHTML = '<span class="status-error">✖ ' + (result.message || "Hata") + '</span>';
