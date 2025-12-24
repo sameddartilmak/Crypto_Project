@@ -8,3 +8,7 @@ from . import rail_fence
 from . import substitution
 from . import columnar
 from . import hill
+from . import polybius
+from . import vernam
+from . import playfair
+from . import root

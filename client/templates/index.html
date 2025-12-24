@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kriptoloji Projesi - Client</title>
+    <title>Güvenli Mesajlaşma</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        /* CSS Kodları (Aynı Kalacak) */
+        /* CSS Tasarımı */
         body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #333; }
         .container { width: 100%; max-width: 700px; background: #ffffff; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); margin: 20px; }
         h1 { text-align: center; color: #1e3c72; margin-bottom: 30px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; }
@@ -19,19 +19,28 @@
         small { display: block; margin-top: 5px; font-size: 0.85rem; color: #888; }
         .row { display: flex; gap: 20px; }
         .col { flex: 1; }
+        
+        /* Yeni: Anahtar Alanı ve Butonu */
+        .key-wrapper { display: flex; gap: 10px; }
+        .key-wrapper input { flex: 1; }
+        .random-btn { background: #e67e22; color: white; padding: 0 20px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; transition: 0.3s; }
+        .random-btn:hover { background: #d35400; transform: translateY(-2px); }
+
         .btn-group { display: flex; gap: 15px; margin-top: 25px; }
-        button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        button.main-btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         #encryptBtn { background: linear-gradient(45deg, #11998e, #38ef7d); color: white; }
         #encryptBtn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(56, 239, 125, 0.3); }
         #sendBtn { background: linear-gradient(45deg, #2a5298, #4a90e2); color: white; }
         #sendBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(74, 144, 226, 0.4); }
-        button:disabled { background: #d6d6d6; color: #888; cursor: not-allowed; box-shadow: none; transform: none; }
+        button:disabled { background: #d6d6d6; color: #888; cursor: not-allowed; transform: none; box-shadow: none; }
+
         #result-area { margin-top: 30px; padding: 20px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: none; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        #result-area h3 { margin-top: 0; color: #1e3c72; font-size: 1.1rem; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        
         .result-row { margin-bottom: 15px; display: flex; flex-direction: column; }
         .result-label { font-size: 0.85rem; font-weight: bold; color: #666; margin-bottom: 5px; text-transform: uppercase; }
         .result-value { font-family: 'Roboto Mono', monospace; background: #2d3436; color: #00cec9; padding: 10px; border-radius: 6px; word-break: break-all; font-size: 0.95rem; letter-spacing: 0.5px; }
+        
         .status-success { color: #00b894; font-weight: bold; }
         .status-error { color: #d63031; font-weight: bold; }
     </style>
@@ -39,24 +48,24 @@
 <body>
 
 <div class="container">
-    <h1>🛡️ Kriptoloji Client</h1>
+    <h1>🛡️ Güvenli Mesajlaşma</h1>
     
     <div class="row">
         <div class="col form-group">
             <label for="algorithm">Algoritma</label>
             <select id="algorithm" onchange="resetForm()">
-                <optgroup label="Modern Şifreleme (Ödev)">
-                    <option value="aes" selected>AES-128 (Hibrit)</option>
-                    <option value="des">DES-64 (Hibrit)</option>
+                <optgroup label="Modern (Hibrit)">
+                    <option value="aes" selected>AES-128</option>
+                    <option value="des">DES-64</option>
                 </optgroup>
-                <optgroup label="Klasik Şifreleme">
-                    <option value="sezar">Sezar (Caesar)</option>
+                <optgroup label="Klasik">
+                    <option value="sezar">Sezar</option>
                     <option value="vigenere">Vigenere</option>
                     <option value="affine">Affine</option>
                     <option value="rail_fence">Rail Fence</option>
                     <option value="substitution">Substitution</option>
                     <option value="columnar">Columnar Transposition</option>
-                    <option value="hill">Hill Cipher (Matris)</option>
+                    <option value="hill">Hill Cipher</option>
                     <option value="polybius">Polybius Square</option>
                     <option value="playfair">Playfair Cipher</option>
                     <option value="vernam">Vernam (One-Time Pad)</option>
@@ -74,28 +83,32 @@
     </div>
 
     <div class="form-group">
-        <label for="text">Şifrelenecek Metin</label>
+        <label for="text">Mesaj</label>
         <textarea id="text" rows="3" placeholder="Gizli mesajınızı buraya yazın..."></textarea>
     </div>
 
     <div class="form-group">
-        <label for="key">Anahtar (Key)</label>
-        <input type="text" id="key" placeholder="16 Karakterlik Anahtar (AES)">
-        <small id="key-hint">Lütfen 16 karakter giriniz (Eksikse tamamlanır).</small>
+        <label for="key">Anahtar</label>
+        <div class="key-wrapper">
+            <input type="text" id="key" placeholder="Anahtar">
+            <button onclick="generateRandomKey()" class="random-btn">🎲 Rastgele</button>
+        </div>
+        <small id="key-hint">Lütfen anahtar girin veya oluşturun.</small>
     </div>
 
     <div class="btn-group">
-        <button onclick="performEncrypt()" id="encryptBtn">
-            🔒 1. Şifrele
-        </button>
-        <button onclick="sendToServer()" id="sendBtn" disabled>
-            🚀 2. Server'a Gönder
-        </button>
+        <button onclick="performEncrypt()" id="encryptBtn" class="main-btn">🔒 1. Şifrele</button>
+        <button onclick="sendToServer()" id="sendBtn" class="main-btn" disabled>🚀 2. Server'a Gönder</button>
     </div>
 
     <div id="result-area">
         <h3>Sonuç Konsolu</h3>
         
+        <div class="result-row">
+            <span class="result-label">Şifreleme Süresi:</span>
+            <div style="font-weight:bold; color: #2d3436;">⏱️ <span id="time-result">0.0</span> saniye</div>
+        </div>
+
         <div class="result-row">
             <span class="result-label">Oluşturulan Şifreli Metin (Ciphertext):</span>
             <div id="cipher-result" class="result-value">-</div>
@@ -106,14 +119,19 @@
             <div id="enc-key-result" class="result-value" style="color: #fdcb6e; font-size: 0.8rem;">-</div>
         </div>
 
-        <div class="result-row" style="border-top: 1px dashed #ccc; padding-top: 10px;">
+        <div class="result-row" style="border-top: 2px dashed #ccc; padding-top: 15px; margin-top:15px;">
             <span class="result-label">Server Bağlantı Durumu:</span>
-            <span id="server-status">-</span>
+            <span id="server-status" style="font-weight:bold;">-</span>
         </div>
 
         <div class="result-row">
             <span class="result-label">Server Tarafından Çözülen Metin (Plaintext):</span>
             <div id="server-plaintext" class="result-value" style="color: #fab1a0;">-</div>
+        </div>
+
+        <div class="result-row" id="server-reply-area" style="display:none; margin-top: 10px;">
+            <span class="result-label">📩 Server'dan Gelen Şifreli Cevap (Sizin için çözüldü):</span>
+            <div id="server-reply-decrypted" class="result-value" style="color: #55efc4; border: 2px solid #55efc4;">-</div>
         </div>
     </div>
 </div>
@@ -122,17 +140,13 @@
     let currentCiphertext = "";
     let currentEncryptedKey = null;
 
-    window.onload = function() {
-        updatePlaceholder();
-    };
+    window.onload = function() { updatePlaceholder(); };
 
     function resetForm() {
         updatePlaceholder();
         document.getElementById('sendBtn').disabled = true;
         document.getElementById('result-area').style.display = 'none';
-        document.getElementById('cipher-result').innerText = "-";
-        document.getElementById('enc-key-result').innerText = "-";
-        document.getElementById('enc-key-row').style.display = 'none';
+        document.getElementById('server-reply-area').style.display = 'none';
         currentCiphertext = "";
         currentEncryptedKey = null;
     }
@@ -141,87 +155,38 @@
         const algo = document.getElementById('algorithm').value;
         const hint = document.getElementById('key-hint');
         const keyInput = document.getElementById('key');
-        const modeSelect = document.getElementById('mode');
         
+        // RSA yok, anahtar hep aktif
         keyInput.disabled = false;
-            
-        // 1. Modern Şifreler
-        if(algo === 'aes' || algo === 'des') {
-            modeSelect.disabled = false;
-            if(algo === 'aes') { 
-                hint.innerText = "16 karakter giriniz (Server'a RSA ile şifreli gider)."; 
-                keyInput.placeholder = "16 Karakterlik Anahtar";
-                keyInput.setAttribute("maxlength", "16");
-                keyInput.type = "text";
-            }
-            else { 
-                hint.innerText = "8 karakter giriniz (Server'a RSA ile şifreli gider)."; 
-                keyInput.placeholder = "8 Karakterlik Anahtar";
-                keyInput.setAttribute("maxlength", "8");
-                keyInput.type = "text";
-            }
-        }
-        // 2. Klasik Şifreler
-        else {
-            modeSelect.disabled = true;
-            keyInput.removeAttribute("maxlength");
+        
+        if(algo === 'aes') { hint.innerText = "16 Karakter (AES-128)"; keyInput.setAttribute("maxlength", "16"); }
+        else if(algo === 'des') { hint.innerText = "8 Karakter (DES-64)"; keyInput.setAttribute("maxlength", "8"); }
+        else if(algo === 'vernam') { hint.innerText = "⚠️ Metin uzunluğu kadar olmalı!"; }
+        else if(algo === 'root') { hint.innerText = "Sütun sayısı (Sayı girin)."; }
+        else { hint.innerText = "Anahtar girin veya rastgele üretin."; keyInput.removeAttribute("maxlength"); }
+    }
 
-            if(algo === 'sezar') {
-                hint.innerText = "Kaydırma miktarı (Sayı girin).";
-                keyInput.placeholder = "Örn: 3";
-                keyInput.type = "number";
+    // --- YENİ: RASTGELE ANAHTAR ---
+    async function generateRandomKey() {
+        const algo = document.getElementById('algorithm').value;
+        const text = document.getElementById('text').value;
+        
+        try {
+            const response = await fetch('/generate_key', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    algorithm: algo,
+                    text_length: text.length // Vernam için lazım
+                })
+            });
+            const result = await response.json();
+            if(result.status === 'success') {
+                document.getElementById('key').value = result.key;
+            } else {
+                alert("Hata: " + result.message);
             }
-            else if(algo === 'vigenere') {
-                hint.innerText = "Anahtar kelime girin (Sadece Harf).";
-                keyInput.placeholder = "Örn: ANAHTAR";
-                keyInput.type = "text";
-            }
-            else if(algo === 'affine') {
-                hint.innerText = "a,b formatında girin.";
-                keyInput.placeholder = "Örn: 5,8";
-                keyInput.type = "text";
-            }
-            else if(algo === 'rail_fence') {
-                hint.innerText = "Ray sayısı (Sayı girin).";
-                keyInput.placeholder = "Örn: 3";
-                keyInput.type = "number";
-            }
-            else if(algo === 'substitution') {
-                hint.innerText = "26 harflik karışık alfabe.";
-                keyInput.placeholder = "Örn: QWERTY...";
-                keyInput.type = "text";
-            }
-            else if(algo === 'columnar') {
-                hint.innerText = "Anahtar kelime girin.";
-                keyInput.placeholder = "Örn: COLUMN";
-                keyInput.type = "text";
-            }
-            else if(algo === 'hill') {
-                hint.innerText = "Matris elemanlarını boşlukla girin (4 sayı=2x2, 9 sayı=3x3).";
-                keyInput.placeholder = "Örn: 6 24 1 13";
-                keyInput.type = "text";
-            }
-            else if(algo === 'polybius') {
-                hint.innerText = "Anahtar kelime (İsteğe bağlı, boş bırakılırsa standart alfabe kullanılır).";
-                keyInput.placeholder = "Örn: SIFRE (veya boş bırakın)";
-                keyInput.type = "text";
-            }
-            else if(algo === 'playfair') {
-                hint.innerText = "Matris anahtarını girin (İkililer için kullanılır).";
-                keyInput.placeholder = "Örn: MONARCHY";
-                keyInput.type = "text";
-            }
-            else if(algo === 'vernam') {
-                hint.innerText = "⚠️ Anahtar, metinle EŞİT uzunlukta olmalıdır!";
-                keyInput.placeholder = "Metinle aynı uzunlukta anahtar girin.";
-                keyInput.type = "text";
-            }
-            else if(algo === 'root') {
-                hint.innerText = "Sütun sayısı (Izgara genişliği).";
-                keyInput.placeholder = "Örn: 4";
-                keyInput.type = "number";
-            }
-        }
+        } catch(e) { alert("Bağlantı hatası: " + e); }
     }
 
     async function performEncrypt() {
@@ -232,40 +197,28 @@
         const sendBtn = document.getElementById('sendBtn');
         const cipherRes = document.getElementById('cipher-result');
         const encKeyRes = document.getElementById('enc-key-result');
+        const timeRes = document.getElementById('time-result');
 
         sendBtn.disabled = true;
-
-        if(algo !== 'polybius' && algo !== 'root' && !key) {
-            alert("Lütfen bir anahtar giriniz.");
-            return;
-        }
-        if(!text) {
-            alert("Lütfen şifrelenecek metni giriniz.");
-            return;
-        }
+        if(!key) { alert("Lütfen anahtar girin."); return; }
+        if(!text) { alert("Metin girin."); return; }
 
         try {
             const response = await fetch('/encrypt', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    algorithm: algo, 
-                    mode: mode, 
-                    text: text, 
-                    key: key 
-                })
+                body: JSON.stringify({ algorithm: algo, mode: mode, text: text, key: key })
             });
 
             const result = await response.json();
             const resArea = document.getElementById('result-area');
-            
             resArea.style.display = 'block';
             
             if (result.status === 'success') {
                 cipherRes.innerText = result.ciphertext;
                 currentCiphertext = result.ciphertext;
+                timeRes.innerText = result.duration; // Süreyi yazdır
                 
-                // Hibrit Anahtar (Sadece AES/DES varsa göster)
                 if(result.encrypted_key) {
                     currentEncryptedKey = result.encrypted_key;
                     encKeyRes.innerText = result.encrypted_key.substring(0, 50) + "...";
@@ -274,18 +227,14 @@
                     currentEncryptedKey = null;
                     document.getElementById('enc-key-row').style.display = 'none';
                 }
-
                 sendBtn.disabled = false;
-                
                 document.getElementById('server-status').innerText = "Bekleniyor...";
                 document.getElementById('server-plaintext').innerText = "-";
+                document.getElementById('server-reply-area').style.display = 'none';
             } else {
                 cipherRes.innerHTML = `<span class="status-error">${result.message}</span>`;
-                sendBtn.disabled = true;
             }
-        } catch (error) {
-            alert("Bir hata oluştu: " + error);
-        }
+        } catch (error) { alert("Hata: " + error); }
     }
 
     async function sendToServer() {
@@ -294,6 +243,7 @@
         const statusSpan = document.getElementById('server-status');
         const plainSpan = document.getElementById('server-plaintext');
         const sendBtn = document.getElementById('sendBtn');
+        const key = document.getElementById('key').value; // Cevabı çözmek için lazım
 
         statusSpan.innerText = "Server bekleniyor...";
         sendBtn.disabled = true;
@@ -306,18 +256,26 @@
                     algorithm: algo, 
                     mode: mode, 
                     ciphertext: currentCiphertext,
-                    encrypted_key: currentEncryptedKey
+                    encrypted_key: currentEncryptedKey,
+                    client_key: key // Hibrit olmayanlar için anahtarı gönderiyoruz ki cevabı çözebilelim
                 })
             });
 
             const result = await response.json();
             
             if (result.status === 'success') {
-                statusSpan.innerHTML = '<span class="status-success">✓ DEŞİFRELEME BAŞARILI</span>';
+                statusSpan.innerHTML = '<span class="status-success">✓ MESAJ İLETİLDİ & CEVAP ALINDI</span>';
                 plainSpan.innerText = result.plaintext;
+                
+                // Server cevabını göster
+                const replyArea = document.getElementById('server-reply-area');
+                const replyVal = document.getElementById('server-reply-decrypted');
+                replyArea.style.display = 'flex';
+                replyVal.innerText = result.server_reply_decrypted;
+
             } else {
-                statusSpan.innerHTML = '<span class="status-error">✖ BAŞARISIZ</span>';
-                plainSpan.innerText = result.message || "Hata oluştu";
+                statusSpan.innerHTML = '<span class="status-error">✖ ' + (result.message || "Hata") + '</span>';
+                plainSpan.innerText = "-";
             }
         } catch (error) {
             statusSpan.innerText = "Hata: Server ile iletişim kurulamadı.";

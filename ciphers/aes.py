@@ -14,9 +14,10 @@ def get_valid_key(key):
 
 # KÜTÜPHANELİ
 
+
 def encrypt_lib(text, key):
     try:
-        key_bytes = get_valid_key(key) # 16 Byte Garanti
+        key_bytes = get_valid_key(key)
         cipher = LibAES.new(key_bytes, LibAES.MODE_ECB)
         padded_text = lib_pad(text.encode('utf-8'), LibAES.block_size)
         encrypted_bytes = cipher.encrypt(padded_text)
@@ -26,7 +27,7 @@ def encrypt_lib(text, key):
 
 def decrypt_lib(encrypted_text, key):
     try:
-        key_bytes = get_valid_key(key) # 16 Byte Garanti
+        key_bytes = get_valid_key(key)
         cipher = LibAES.new(key_bytes, LibAES.MODE_ECB)
         decoded_encrypted_text = base64.b64decode(encrypted_text)
         decrypted_text = lib_unpad(cipher.decrypt(decoded_encrypted_text), LibAES.block_size)

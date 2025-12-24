@@ -36,12 +36,10 @@ def decrypt(text, key):
         
     if rail_count <= 1: return text
 
-    # Boş bir matris oluştur, şifreli metnin harflerinin geleceği yerleri işaretle
     fence = [['\n' for _ in range(len(text))] for _ in range(rail_count)]
     direction = -1
     row, col = 0, 0
 
-    # Zikzak rotasını belirle ve işaretle
     for i in range(len(text)):
         if row == 0 or row == rail_count - 1:
             direction *= -1
@@ -50,7 +48,6 @@ def decrypt(text, key):
         col += 1
         row += direction
 
-    # İşaretli yerlere şifreli metindeki harfleri sırasıyla koy
     index = 0
     for i in range(rail_count):
         for j in range(len(text)):
@@ -58,7 +55,6 @@ def decrypt(text, key):
                 fence[i][j] = text[index]
                 index += 1
 
-    # Zikzak rotasını tekrar takip ederek metni oku
     result = []
     row, col = 0, 0
     direction = -1

@@ -12,14 +12,11 @@ def get_key_matrix_from_numbers(key_string):
     "6 24 1 13" gibi string'i alıp [[6, 24], [1, 13]] matrisine çevirir.
     """
     try:
-        # Virgül veya boşluk varsa ayıkla
         key_string = key_string.replace(',', ' ')
-        # String listesini int listesine çevir
         numbers = [int(x) for x in key_string.split()]
     except ValueError:
         return None, "Hata: Anahtar sadece sayılardan oluşmalıdır (Örn: 6 24 1 13)."
 
-    # Matris boyutu belirle (Tam kare kontrolü)
     length = len(numbers)
     n = int(math.sqrt(length))
     
@@ -31,7 +28,6 @@ def get_key_matrix_from_numbers(key_string):
     for i in range(n):
         row = []
         for j in range(n):
-            # Mod 26 alarak ekle (Kullanıcı 30 girerse 4 olarak işlem görsün)
             row.append(numbers[k] % 26)
             k += 1
         key_matrix.append(row)
@@ -61,19 +57,15 @@ def transpose_matrix(matrix, n):
     return [[matrix[j][i] for j in range(n)] for i in range(n)]
 
 def encrypt(text, key):
-    # Boşlukları sil ve büyüt
     text = text.upper().replace(" ", "")
     
-    # 1. Anahtarı Sayılardan Matrise Çevir
     key_matrix, n_or_error = get_key_matrix_from_numbers(key)
     
-    # Hata döndüyse (String geldiyse) direkt return et
     if key_matrix is None:
         return n_or_error
         
-    n = n_or_error # n değeri (boyut)
+    n = n_or_error 
 
-    # Padding
     while len(text) % n != 0:
         text += 'X'
         
@@ -94,7 +86,6 @@ def encrypt(text, key):
     return cipher_text
 
 def decrypt(text, key):
-    # 1. Anahtarı Sayılardan Matrise Çevir
     key_matrix, n_or_error = get_key_matrix_from_numbers(key)
     
     if key_matrix is None:
@@ -102,7 +93,6 @@ def decrypt(text, key):
         
     n = n_or_error
 
-    # Determinant Hesapla
     det = 0
     if n == 2:
         det = (key_matrix[0][0] * key_matrix[1][1] - key_matrix[0][1] * key_matrix[1][0])
@@ -116,7 +106,6 @@ def decrypt(text, key):
     if det_inv == -1:
         return "Hata: Bu matrisin tersi yoktur (Determinant mod 26'da terslenemez)."
 
-    # Ters Matris Bulma
     inv_key_matrix = []
     if n == 2:
         inv_key_matrix = [
