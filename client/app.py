@@ -6,20 +6,18 @@ import os
 import time
 import secrets
 import string
-import struct # YENİ: Veri boyutunu paketlemek için gerekli
+import struct 
 
 # Üst klasördeki modülleri görebilmek için yol ekle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# --- TÜM ALGORİTMALARI EKSİKSİZ IMPORT ET ---
-from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill, polybius, vernam, playfair, root
+# --- TÜM ALGORİTMALARI IMPORT ET ---
+from ciphers import aes, des, rsa, ecc, caesar, vigenere, affine, rail_fence, substitution, columnar, hill, polybius, vernam, playfair, root
 
 app = Flask(__name__)
-
 SERVER_HOST = '127.0.0.1'
 SERVER_PORT = 65432
 
-# YARDIMCI FONKSİYON: Tam veri okuma (Socket kopmalarını önler)
 def recv_all(sock, n):
     data = b''
     while len(data) < n:
@@ -32,7 +30,6 @@ def recv_all(sock, n):
 def index():
     return render_template('index.html')
 
-# --- 1. RASTGELE ANAHTAR ÜRETME ---
 @app.route('/generate_key', methods=['POST'])
 def generate_key_route():
     data = request.json
@@ -42,7 +39,8 @@ def generate_key_route():
     key = ""
     try:
         if algo == 'aes': key = secrets.token_urlsafe(16)[:16] 
-        elif algo == 'des': key = secrets.token_urlsafe(8)[:8]   
+        elif algo == 'des': key = secrets.token_urlsafe(8)[:8]
+        elif algo == 'ecc': key = "ECC-AUTO-KEY" 
         elif algo == 'vernam':
             if text_length > 0: key = ''.join(secrets.choice(string.ascii_uppercase) for _ in range(text_length))
             else: return jsonify({'status': 'error', 'message': 'Vernam için metin/dosya girin!'})
@@ -57,7 +55,24 @@ def generate_key_route():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
-# --- 2. ŞİFRELEME VE SÜRE ÖLÇÜMÜ ---
+def get_server_keys():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((SERVER_HOST, SERVER_PORT))
+            msg = json.dumps({"type": "GET_PUBLIC_KEY"}).encode('utf-8')
+            s.sendall(struct.pack('>I', len(msg)) + msg)
+            
+            raw_msglen = recv_all(s, 4)
+            if not raw_msglen: return None
+            
+            msglen = struct.unpack('>I', raw_msglen)[0]
+            data = recv_all(s, msglen)
+            
+            if not data: return None
+            return json.loads(data.decode('utf-8'))
+    except:
+        return None
+
 @app.route('/encrypt', methods=['POST'])
 def encrypt_route():
     data = request.json
@@ -71,6 +86,7 @@ def encrypt_route():
     duration = 0
 
     try:
+        # --- HİBRİT SİSTEM (AES ve DES) ---
         if algo in ['aes', 'des']:
             start_time = time.perf_counter() 
             
@@ -81,21 +97,42 @@ def encrypt_route():
                 if mode == 'manual': encrypted_text = des.encrypt_manual(text, key) 
                 else: encrypted_text = des.encrypt_lib(text, key)
             
-            end_time = time.perf_counter()
-            duration = round(end_time - start_time, 6)
+            duration = round(time.perf_counter() - start_time, 6)
 
-            public_key = get_server_public_key()
-            if not public_key:
-                return jsonify({'status': 'error', 'message': 'Server Kapalı veya Ulaşılamıyor!'})
-            encrypted_key = rsa.encrypt(key, public_key)
+            keys = get_server_keys()
+            if not keys or 'public_key' not in keys:
+                return jsonify({'status': 'error', 'message': 'Server RSA Anahtarı Vermedi!'})
+            
+            encrypted_key = rsa.encrypt(key, keys.get('public_key'))
 
-        elif algo == 'rsa':
-            public_key = get_server_public_key()
-            if not public_key:
-                return jsonify({'status': 'error', 'message': 'Server Kapalı veya Ulaşılamıyor!'})
+        # --- ECC (DÜZELTİLDİ: MOD KONTROLÜ EKLENDİ) ---
+        elif algo == 'ecc':
+            keys = get_server_keys()
+            if not keys: 
+                return jsonify({'status': 'error', 'message': 'Server Anahtarı Vermedi!'})
             
             start_time = time.perf_counter()
-            encrypted_text = rsa.encrypt(text, public_key)
+            
+            if mode == 'manual':
+                # Manuel Mod için 'ecc_manual_key' kullan
+                server_pub = keys.get('ecc_manual_key')
+                if not server_pub: return jsonify({'status': 'error', 'message': 'Server Manual ECC Key Vermedi!'})
+                encrypted_text = ecc.encrypt_manual(text, server_pub)
+            else:
+                # Lib Modu için 'ecc_lib_key' kullan
+                server_pub = keys.get('ecc_lib_key')
+                if not server_pub: return jsonify({'status': 'error', 'message': 'Server Lib ECC Key Vermedi!'})
+                encrypted_text = ecc.encrypt_lib(text, server_pub)
+                
+            duration = round(time.perf_counter() - start_time, 6)
+
+        # --- RSA (Legacy) ---
+        elif algo == 'rsa':
+            keys = get_server_keys()
+            if not keys: return jsonify({'status': 'error', 'message': 'Server Kapalı!'})
+            
+            start_time = time.perf_counter()
+            encrypted_text = rsa.encrypt(text, keys.get('public_key'))
             duration = round(time.perf_counter() - start_time, 6)
 
         # --- KLASİK ŞİFRELEMELER ---
@@ -125,27 +162,7 @@ def encrypt_route():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
-def get_server_public_key():
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((SERVER_HOST, SERVER_PORT))
-            
-
-            msg = json.dumps({"type": "GET_PUBLIC_KEY"}).encode('utf-8')
-
-            s.sendall(struct.pack('>I', len(msg)) + msg)
-
-            raw_msglen = recv_all(s, 4)
-            if not raw_msglen: return None
-            
-            msglen = struct.unpack('>I', raw_msglen)[0]
-            data = recv_all(s, msglen)
-            
-            if not data: return None
-            return json.loads(data.decode('utf-8')).get('public_key')
-    except:
-        return None
-
+# --- 3. SERVER'A GÖNDER VE CEVABI ÇÖZ ---
 @app.route('/send_to_server', methods=['POST'])
 def send_server():
     data = request.json
@@ -165,61 +182,59 @@ def send_server():
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((SERVER_HOST, SERVER_PORT))
-
             s.sendall(struct.pack('>I', len(payload)) + payload)
-
+            
             raw_msglen = recv_all(s, 4)
             if not raw_msglen:
-                return jsonify({'status': 'error', 'message': 'Server cevap vermedi veya bağlantı koptu.'})
+                return jsonify({'status': 'error', 'message': 'Server cevap vermedi'})
             
             msglen = struct.unpack('>I', raw_msglen)[0]
-
             response_data = recv_all(s, msglen)
-            if not response_data:
-                return jsonify({'status': 'error', 'message': 'Server cevabı eksik geldi.'})
             
             server_resp = json.loads(response_data.decode('utf-8'))
             
             if server_resp.get('status') == 'error':
                 return jsonify(server_resp)
 
-            server_ciphertext = server_resp.get('server_ciphertext', '')
-            server_new_key = server_resp.get('server_key', '')
+            server_cipher = server_resp.get('server_ciphertext', '')
+            server_key = server_resp.get('server_key', '')
             
             decrypted_reply = "Çözülemedi"
             try:
-                key_to_use = server_new_key if server_new_key else client_key
+                use_key = server_key if server_key else client_key
 
-                if not server_ciphertext:
-                    decrypted_reply = "Server boş cevap döndü."
+                if not server_cipher: decrypted_reply = "Server boş cevap döndü."
+                
                 elif algo == 'aes':
-                    if mode == 'manual': decrypted_reply = aes.decrypt_manual(server_ciphertext, key_to_use)
-                    else: decrypted_reply = aes.decrypt_lib(server_ciphertext, key_to_use)
+                    if mode == 'manual': decrypted_reply = aes.decrypt_manual(server_cipher, use_key)
+                    else: decrypted_reply = aes.decrypt_lib(server_cipher, use_key)
                 elif algo == 'des':
-                    if mode == 'manual': decrypted_reply = des.decrypt_manual(server_ciphertext, key_to_use)
-                    else: decrypted_reply = des.decrypt_lib(server_ciphertext, key_to_use)
-                elif algo == 'rsa': decrypted_reply = "RSA ile cevap desteklenmiyor."
-                elif algo == 'sezar': decrypted_reply = caesar.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'vigenere': decrypted_reply = vigenere.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'affine': decrypted_reply = affine.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'rail_fence': decrypted_reply = rail_fence.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'substitution': decrypted_reply = substitution.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'columnar': decrypted_reply = columnar.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'hill': decrypted_reply = hill.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'polybius': decrypted_reply = polybius.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'vernam': decrypted_reply = vernam.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'playfair': decrypted_reply = playfair.decrypt(server_ciphertext, key_to_use)
-                elif algo == 'root': decrypted_reply = root.decrypt(server_ciphertext, key_to_use)
-                else: decrypted_reply = "Algoritma tanınmadı."
+                    if mode == 'manual': decrypted_reply = des.decrypt_manual(server_cipher, use_key)
+                    else: decrypted_reply = des.decrypt_lib(server_cipher, use_key)
+                
+                elif algo == 'ecc': decrypted_reply = "ECC modunda server cevabı şifreli değildir."
+                elif algo == 'rsa': decrypted_reply = "RSA desteklenmiyor."
+                
+                # Klasikler
+                elif algo == 'sezar': decrypted_reply = caesar.decrypt(server_cipher, use_key)
+                elif algo == 'vigenere': decrypted_reply = vigenere.decrypt(server_cipher, use_key)
+                elif algo == 'affine': decrypted_reply = affine.decrypt(server_cipher, use_key)
+                elif algo == 'rail_fence': decrypted_reply = rail_fence.decrypt(server_cipher, use_key)
+                elif algo == 'substitution': decrypted_reply = substitution.decrypt(server_cipher, use_key)
+                elif algo == 'columnar': decrypted_reply = columnar.decrypt(server_cipher, use_key)
+                elif algo == 'hill': decrypted_reply = hill.decrypt(server_cipher, use_key)
+                elif algo == 'polybius': decrypted_reply = polybius.decrypt(server_cipher, use_key)
+                elif algo == 'vernam': decrypted_reply = vernam.decrypt(server_cipher, use_key)
+                elif algo == 'playfair': decrypted_reply = playfair.decrypt(server_cipher, use_key)
+                elif algo == 'root': decrypted_reply = root.decrypt(server_cipher, use_key)
 
-            except Exception as dec_err:
-                decrypted_reply = f"Cevap Deşifre Hatası: {str(dec_err)}"
+            except: pass
 
             return jsonify({
                 'status': 'success',
                 'plaintext': server_resp.get('plaintext'),
                 'server_reply_decrypted': decrypted_reply,
-                'server_key_used': server_new_key
+                'server_key_used': server_key
             })
 
     except Exception as e:

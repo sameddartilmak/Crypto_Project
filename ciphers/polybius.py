@@ -1,6 +1,6 @@
 
 def create_polybius_square(key=None):
-    alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ" # J yok, I ile birleşik
+    alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
     square = []
     key_chars = []
     if key:

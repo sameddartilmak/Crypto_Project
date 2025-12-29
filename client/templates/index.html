@@ -107,7 +107,7 @@
             box-shadow: 0 0 15px rgba(0, 255, 157, 0.1);
         }
 
-        /* DİSABLED DURUMU İÇİN STİL (YENİ) */
+        /* DİSABLED DURUMU İÇİN STİL */
         .cyber-input:disabled {
             background: #0f0f0f;
             color: #444;
@@ -235,8 +235,9 @@
                 <label>ENCRYPTION PROTOCOL</label>
                 <select id="algorithm" class="cyber-input" onchange="resetForm()">
                     <optgroup label="-- MODERN --">
-                        <option value="aes" selected>AES-128 (Modern Standard)</option>
-                        <option value="des">DES-64 (Legacy)</option>
+                        <option value="aes" selected>AES-128 (Hybrid)</option>
+                        <option value="des">DES-64 (Hybrid)</option>
+                        <option value="ecc">ECC (Elliptic Curve)</option>
                     </optgroup>
                     <optgroup label="-- CLASSICAL --">
                         <option value="sezar">CAESAR Cipher</option>
@@ -305,6 +306,7 @@
     let currentEncryptedKey = null;
     let selectedFilename = null;
 
+    // Sayfa açıldığında arayüzü ayarla
     window.onload = function() {
         updateModeVisibility();
     };
@@ -331,22 +333,37 @@
             reader.readAsDataURL(file);
         }
     }
+
+    // YENİ: Algoritmaya göre Mod ve Anahtar alanlarını yönetir
     function updateModeVisibility() {
         const algo = document.getElementById('algorithm').value;
         const modeSelect = document.getElementById('mode');
+        const keyInput = document.getElementById('key');
 
         if (algo === 'aes' || algo === 'des') {
+            // AES ve DES için her şey serbest
             modeSelect.disabled = false;
-
+            keyInput.disabled = false;
+            if(keyInput.value === "[AUTO: SERVER PUBLIC KEY]") keyInput.value = "";
+            
+        } else if (algo === 'ecc') {
+            // ECC: Mod Seçilebilir (Lib/Manual), Anahtar OTOMATİK
+            modeSelect.disabled = false; // Kullanıcı Manuel veya Lib seçebilir
+            
+            keyInput.value = "[AUTO: SERVER PUBLIC KEY]";
+            keyInput.disabled = true;
+            
         } else {
-
+            // Klasikler için Mod 'Manual' olmalı
             modeSelect.value = 'manual';
             modeSelect.disabled = true;
+            keyInput.disabled = false;
+            if(keyInput.value === "[AUTO: SERVER PUBLIC KEY]") keyInput.value = "";
         }
     }
 
     function resetForm() {
-        updateModeVisibility(); // Mod seçimini güncelle
+        updateModeVisibility(); // Arayüzü güncelle
         document.getElementById('sendBtn').disabled = true;
         document.getElementById('result-area').style.display = 'none';
         document.getElementById('dynamic-logs').innerHTML = '';
@@ -355,6 +372,10 @@
     async function generateRandomKey() {
         const algo = document.getElementById('algorithm').value;
         const len = document.getElementById('text').value.length;
+        
+        // ECC için anahtar üretmeye gerek yok (Server PubKey kullanılıyor)
+        if(algo === 'ecc') return;
+
         try {
             const res = await fetch('/generate_key', {
                 method: 'POST', 
@@ -375,7 +396,8 @@
         const text = document.getElementById('text').value;
         const key = document.getElementById('key').value;
 
-        if(!key || !text) { addLog('ERROR', 'Missing Input Data', 'error'); return; }
+        // ECC haricinde anahtar kontrolü yap
+        if((!key && algo !== 'ecc') || !text) { addLog('ERROR', 'Missing Input Data', 'error'); return; }
 
         document.getElementById('encryptBtn').innerHTML = '<i class="fas fa-cog fa-spin"></i> PROCESSING';
 

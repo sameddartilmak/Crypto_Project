@@ -8,20 +8,30 @@ import string
 import time
 import base64
 import struct 
+
+# Üst klasördeki modülleri görebilmek için yol ekle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ciphers import aes, des, rsa, caesar, vigenere, affine, rail_fence, substitution, columnar, hill, polybius, vernam, playfair, root
+# --- TÜM MODÜLLERİ IMPORT ET ---
+from ciphers import aes, des, rsa, ecc, caesar, vigenere, affine, rail_fence, substitution, columnar, hill, polybius, vernam, playfair, root
 
 print("\n" + "="*50)
 print("SERVER BAŞLATILIYOR...")
-print("RSA Anahtarları üretiliyor... Lütfen bekleyin.")
+print("🔐 RSA Anahtarları üretiliyor...")
 PRIVATE_KEY, PUBLIC_KEY = rsa.generate_keys()
+
+# DÜZELTME 1: ECC Anahtarları (Lib ve Manuel Ayrı Ayrı Üretiliyor)
+print("🔐 ECC (Lib) Anahtarları üretiliyor...")
+ECC_LIB_PRIV, ECC_LIB_PUB = ecc.generate_keys_lib()
+
+print("🔐 ECC (Manual) Anahtarları üretiliyor...")
+ECC_MAN_PRIV, ECC_MAN_PUB = ecc.generate_keys_manual()
 
 MAIN_SAVE_DIR = "server_received_files"
 if not os.path.exists(MAIN_SAVE_DIR):
     os.makedirs(MAIN_SAVE_DIR)
 
-print(f"RSA Hazır! Dosyalar '{MAIN_SAVE_DIR}' altındaki klasörlere kaydedilecek.")
+print(f"✅ Sistem Hazır! Dosyalar '{MAIN_SAVE_DIR}' klasörüne kaydedilecek.")
 print("="*50 + "\n")
 
 HOST = '127.0.0.1'
@@ -87,12 +97,13 @@ def start_server():
     try:
         server_socket.bind((HOST, PORT))
         server_socket.listen()
-        print(f"✅  Server {HOST}:{PORT} üzerinde dinleniyor... (Kapatmak için Ctrl+C)")
+        print(f"✅  Server {HOST}:{PORT} üzerinde dinleniyor... (ECC Lib+Manual Aktif)")
         
         while True:
             try:
                 conn, addr = server_socket.accept()
                 with conn:
+                    # Uzunluk-Önekli Protokol (Length-Prefixing)
                     raw_msglen = recv_all(conn, 4)
                     if not raw_msglen: break
                     
@@ -105,10 +116,18 @@ def start_server():
                         request = json.loads(data.decode('utf-8'))
                         req_type = request.get('type')
 
+                        # DÜZELTME 2: Client'a 3 Anahtarı da Gönderiyoruz (RSA + ECC Lib + ECC Man)
                         if req_type == 'GET_PUBLIC_KEY':
-                            payload = json.dumps({"status": "success", "public_key": PUBLIC_KEY.decode('utf-8')}).encode('utf-8')
+                            payload = json.dumps({
+                                "status": "success", 
+                                "public_key": PUBLIC_KEY.decode('utf-8'), # RSA
+                                "ecc_lib_key": ECC_LIB_PUB,               # ECC Lib
+                                "ecc_manual_key": ECC_MAN_PUB             # ECC Manual
+                            }).encode('utf-8')
                             conn.sendall(struct.pack('>I', len(payload)) + payload)
                             continue
+                        
+                        # --- VERİ İŞLEME ---
                         algo = request.get('algorithm')
                         mode = request.get('mode')
                         cipher_text = request.get('ciphertext')
@@ -122,6 +141,7 @@ def start_server():
                         decrypted_text = ""
                         incoming_key = ""
 
+                        # 1. DEŞİFRELEME BLOĞU
                         if algo in ['aes', 'des']:
                             if not encrypted_key_b64:
                                 decrypted_text = "Hata: Şifreli anahtar pakette yok!"
@@ -140,7 +160,19 @@ def start_server():
                             decrypted_text = rsa.decrypt(cipher_text, PRIVATE_KEY)
                             incoming_key = "RSA Private Key"
                         
+                        # DÜZELTME 3: ECC Çözme İşlemi (Mod Kontrolü Eklendi)
+                        elif algo == 'ecc':
+                            if mode == 'manual':
+                                print("   > Mod: MANUEL (Matematiksel)")
+                                decrypted_text = ecc.decrypt_manual(cipher_text, ECC_MAN_PRIV)
+                                incoming_key = "ECC Manual Priv Key"
+                            else:
+                                print("   > Mod: LIBRARY (eciespy)")
+                                decrypted_text = ecc.decrypt_lib(cipher_text, ECC_LIB_PRIV)
+                                incoming_key = "ECC Lib Priv Key"
+
                         else:
+                            # Klasik Algoritmalar
                             print(f"⚠️  {algo.upper()} için anahtar gereklidir.")
                             incoming_key = input("   CLIENT'IN ANAHTARINI GİRİN >> ")
                             
@@ -157,9 +189,9 @@ def start_server():
                             elif algo == 'root': decrypted_text = root.decrypt(cipher_text, incoming_key)
                             else: decrypted_text = f"Hata: Bilinmeyen Algoritma"
 
+                        # 2. DOSYA KAYDETME
                         if filename and "Hata" not in decrypted_text:
                             try:
-
                                 file_data = base64.b64decode(decrypted_text)
                                 save_path = get_save_path(filename)
                                 
@@ -178,8 +210,8 @@ def start_server():
                         print("-" * 50)
                         
                         log_to_file(f"{algo}", cipher_text, incoming_key, decrypted_text, "Alındı")
-                        
 
+                        # 3. CEVAP GÖNDERME
                         reply_msg = ""
                         server_ciphertext = ""
                         new_server_key = ""
@@ -200,19 +232,9 @@ def start_server():
                                     server_ciphertext = aes.encrypt_manual(reply_msg, new_server_key) if mode == 'manual' else aes.encrypt_lib(reply_msg, new_server_key)
                                 elif algo == 'des':
                                     server_ciphertext = des.encrypt_manual(reply_msg, new_server_key) if mode == 'manual' else des.encrypt_lib(reply_msg, new_server_key)
-                                elif algo == 'rsa': server_ciphertext = "RSA ile cevap yok"
-                                elif algo == 'sezar': server_ciphertext = caesar.encrypt(reply_msg, new_server_key)
-                                elif algo == 'vigenere': server_ciphertext = vigenere.encrypt(reply_msg, new_server_key)
-                                elif algo == 'affine': server_ciphertext = affine.encrypt(reply_msg, new_server_key)
-                                elif algo == 'rail_fence': server_ciphertext = rail_fence.encrypt(reply_msg, new_server_key)
-                                elif algo == 'substitution': server_ciphertext = substitution.encrypt(reply_msg, new_server_key)
-                                elif algo == 'columnar': server_ciphertext = columnar.encrypt(reply_msg, new_server_key)
-                                elif algo == 'hill': server_ciphertext = hill.encrypt(reply_msg, new_server_key)
-                                elif algo == 'polybius': server_ciphertext = polybius.encrypt(reply_msg, new_server_key)
-                                elif algo == 'vernam': server_ciphertext = vernam.encrypt(reply_msg, new_server_key)
-                                elif algo == 'playfair': server_ciphertext = playfair.encrypt(reply_msg, new_server_key)
-                                elif algo == 'root': server_ciphertext = root.encrypt(reply_msg, new_server_key)
-                                
+                                else:
+                                    server_ciphertext = "Cevap sadece AES/DES modunda"
+
                                 end_time = time.perf_counter()
                                 duration = round(end_time - start_time, 5)
 

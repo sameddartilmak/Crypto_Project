@@ -12,3 +12,4 @@ from . import polybius
 from . import vernam
 from . import playfair
 from . import root
+from . import ecc
